@@ -2,10 +2,11 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
 const admin = require('firebase-admin');
+const Groq = require('groq-sdk');
 
 // 1. CONFIGURACIÓN
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group'; 
 
 // 2. INICIALIZAR FIREBASE
@@ -15,21 +16,40 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-// 3. GEMINI — llamada directa REST para evitar problemas de versión de SDK
-async function callGemini(prompt, base64Image) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-  const body = {
-    contents: [{
-      parts: [
-        { text: prompt },
-        { inline_data: { mime_type: 'image/jpeg', data: base64Image } }
-      ]
-    }]
-  };
-  const res = await axios.post(url, body, { headers: { 'Content-Type': 'application/json' } });
-  return res.data.candidates[0].content.parts[0].text;
+// 3. INICIALIZAR GROQ
+const groq = new Groq({ apiKey: GROQ_API_KEY });
+
+async function callGroq(prompt, base64Image) {
+  const chatCompletion = await groq.chat.completions.create({
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": prompt
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": `data:image/jpeg;base64,${base64Image}`
+            }
+          }
+        ]
+      }
+    ],
+    "model": "llama-3.2-11b-vision-preview",
+    "temperature": 0.1,
+    "max_tokens": 1024,
+    "top_p": 1,
+    "stream": false,
+    "stop": null
+  });
+
+  return chatCompletion.choices[0].message.content;
 }
 
+// 4. BOT DE TELEGRAM
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
 bot.start((ctx) => ctx.reply('👋 ¡Hola! Envíame una foto de la hoja de resultados.\n\n⚠️ IMPORTANTE: Primero configura tu grupo con el comando:\n/group TU_ID_DE_GRUPO'));
@@ -46,20 +66,17 @@ bot.command('group', (ctx) => {
 
 bot.on('photo', async (ctx) => {
   try {
-    ctx.reply('⏳ Recibido. Analizando en la NUBE con Gemini 2.0...');
+    ctx.reply('⏳ Recibido. Analizando en la NUBE con Groq (Llama 3.2 Vision)...');
     console.log('📸 Recibida foto para procesar...');
 
-    // Obtener la URL de la foto de mayor resolución
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
     const fileLink = await ctx.telegram.getFileLink(fileId);
     
-    // Descargar imagen y convertir a base64
     const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
 
-    // Prompt para Gemini
-    const prompt = `Analiza esta imagen de resultados de dominó. Extrae todas las partidas amistosas.
-    Devuelve un JSON con esta estructura:
+    const prompt = `Analiza esta imagen de resultados de dominó. Extrae todas las partidas.
+    Devuelve un JSON estrictamente con esta estructura:
     {
       "partidas": [
         {
@@ -69,32 +86,11 @@ bot.on('photo', async (ctx) => {
       ]
     }`;
 
-    const imagePart = {
-      inlineData: {
-        data: base64Image,
-        mimeType: "image/jpeg"
-      }
-    };
-
-    // Llamada a Gemini (sin reintentos automáticos para evitar timeouts)
-    let text;
-    try {
-      console.log('🤖 Enviando a Gemini...');
-      text = await callGemini(prompt, base64Image);
-      console.log('✅ Gemini respondió correctamente');
-    } catch (e) {
-      const status = e.response?.status;
-      const errMsg = e.response?.data?.error?.message || e.message;
-      console.error('❌ Error Gemini:', errMsg);
-      if (status === 429) {
-        return ctx.reply(`⏳ [NUBE] Error de Google: ${errMsg}`);
-      }
-      throw e;
-    }
-
+    console.log('🤖 Enviando a Groq...');
+    const text = await callGroq(prompt, base64Image);
+    console.log('✅ Groq respondió correctamente');
     console.log('📝 Respuesta de IA:', text);
 
-    // Limpiar y parsear JSON
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No se detectó formato JSON en la respuesta de la IA');
     
@@ -104,7 +100,6 @@ bot.on('photo', async (ctx) => {
       return ctx.reply('❌ No pude encontrar partidas claras en esta foto.');
     }
 
-    // GUARDAR EN FIREBASE
     const groupRef = db.collection('groups').doc(DEFAULT_GROUP_ID);
     const doc = await groupRef.get();
     const groupData = doc.exists ? doc.data() : { matches: [], players: [] };
@@ -117,7 +112,7 @@ bot.on('photo', async (ctx) => {
       team2: { player1Name: p.p2_j1, player2Name: p.p2_j2 },
       score: { team1: p.p1_pts, team2: p.p2_pts },
       winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
-      notes: 'Registrado vía Telegram'
+      notes: 'Registrado vía Telegram (Groq)'
     }));
 
     groupData.matches = [...(groupData.matches || []), ...newMatches];
@@ -126,9 +121,9 @@ bot.on('photo', async (ctx) => {
     ctx.reply(`✅ ¡Éxito! Se han registrado ${newMatches.length} partidas nuevas en el sistema.`);
 
   } catch (error) {
-    console.error(error);
-    ctx.reply('❌ Hubo un error procesando la imagen: ' + error.message);
+    console.error('Error detallado:', error);
+    ctx.reply('❌ Hubo un error procesando la imagen con Groq: ' + error.message);
   }
 });
 
-bot.launch().then(() => console.log('🤖 Bot de Telegram en línea...'));
+bot.launch().then(() => console.log('🤖 Bot de Telegram con Groq en línea...'));
