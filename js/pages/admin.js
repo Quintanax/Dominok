@@ -91,7 +91,7 @@ const AdminPage = {
               </div>
               <p class="text-xs text-muted" style="margin-top:5px">Usa este ID con el comando <code>/group</code> en el bot de Telegram.</p>
             </div>
-            <div style="display:flex;gap:20px;margin-top:10px">
+            <div style="display:flex;gap:20px;margin-top:10px;margin-bottom:20px;">
               <div class="stat-row" style="flex:1">
                 <span class="stat-label">👥 Miembros</span>
                 <span class="stat-value">${DB.getPlayers(Auth.getGroupId()).length}</span>
@@ -101,7 +101,11 @@ const AdminPage = {
                 <span class="stat-value">${DB.getMatches(Auth.getGroupId()).length}</span>
               </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top:15px">💾 Guardar Cambios</button>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:15px; margin-top:5px;">
+               <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+               <button type="button" class="btn btn-danger" onclick="AdminPage.wipeMyGroupData()">🗑️ Borrar Datos del Grupo</button>
+            </div>
           </form>
         </div>
       </div>
@@ -328,6 +332,43 @@ const AdminPage = {
     const name = document.getElementById('grp-name').value.trim();
     DB.updateGroup(Auth.getGroupId(), { name });
     Toast.success('Grupo actualizado');
+  },
+
+  async wipeMyGroupData() {
+    if (!confirm('⚠️ PELIGRO: ¿Estás seguro de que deseas ELIMINAR todas las partidas y jugadores registrados en tu grupo? Esto no se puede deshacer.')) return;
+    
+    // Show loading state
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.2rem;flex-direction:column;';
+    overlay.innerHTML = '<div class="loader" style="margin-bottom:15px;width:40px;height:40px;border:4px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><div>Borrando datos del grupo...</div>';
+    document.body.appendChild(overlay);
+
+    try {
+      const groupId = Auth.getGroupId();
+      
+      // Wipe from cloud if configured
+      if (window.CloudDB && typeof window.CloudDB.wipeCloudData === 'function') {
+        await window.CloudDB.wipeCloudData();
+      }
+
+      // Wipe from local DB
+      DB._store.players = DB._store.players.filter(p => p.groupId !== groupId);
+      DB._store.matches = DB._store.matches.filter(m => m.groupId !== groupId);
+      
+      // Clear logs related to group
+      DB._store.logs = DB._store.logs.filter(l => {
+          const u = DB.getUserById(l.userId);
+          return u ? u.groupId !== groupId : true;
+      });
+
+      DB.save();
+      
+      location.reload();
+    } catch (e) {
+      console.error(e);
+      Toast.error('Hubo un error borrando los datos.');
+      overlay.remove();
+    }
   },
 
   toggleUserActive(userId, active) {
