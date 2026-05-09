@@ -38,7 +38,7 @@ async function callGroq(prompt, base64Image) {
         ]
       }
     ],
-    "model": "llama-3.2-11b-vision-preview",
+    "model": "meta-llama/llama-4-scout-17b-16e-instruct",
     "temperature": 0.1,
     "max_tokens": 1024,
     "top_p": 1,
