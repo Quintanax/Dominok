@@ -10,9 +10,9 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group'; 
 
 // 2. INICIALIZAR FIREBASE
-const serviceAccount = require("./serviceAccountKey.json");
+const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(firebaseCredentials)
 });
 const db = admin.firestore();
 
