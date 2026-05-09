@@ -42,9 +42,9 @@ if (!firebaseConfig.projectId) {
 
 admin.initializeApp({
   credential: admin.credential.cert({
-    projectId: firebaseConfig.projectId,
-    clientEmail: firebaseConfig.clientEmail,
-    privateKey: firebaseConfig.privateKey
+    project_id: firebaseConfig.projectId,
+    client_email: firebaseConfig.clientEmail,
+    private_key: firebaseConfig.privateKey
   })
 });
 const db = admin.firestore();
