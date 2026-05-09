@@ -87,7 +87,7 @@ bot.on('photo', async (ctx) => {
       const errMsg = e.response?.data?.error?.message || e.message;
       console.error('❌ Error Gemini:', errMsg);
       if (status === 429) {
-        return ctx.reply('⏳ La IA está ocupada (límite de peticiones). Espera 1 minuto y vuelve a enviar la foto.');
+        return ctx.reply('⏳ [NUBE] La IA está ocupada (límite de peticiones). Espera 1 minuto y vuelve a enviar la foto.');
       }
       throw e;
     }
