@@ -14,7 +14,7 @@ const PlayersPage = {
         </div>
         <div class="page-header-actions">
           <button class="btn btn-ghost btn-sm" onclick="PlayersPage.exportPlayers()">⬇ Exportar</button>
-          <button class="btn btn-secondary btn-sm" onclick="PlayersPage.openImport()">📂 Importar Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="App.navigate('import')">📂 Importar Excel/CSV</button>
           <button class="btn btn-primary" onclick="PlayersPage.openNew()">+ Nuevo Jugador</button>
         </div>
       </div>
@@ -197,107 +197,8 @@ const PlayersPage = {
     this.loadGrid();
   },
 
-  // ─── IMPORTAR CSV / EXCEL ─────────────────────────────────────
-  openImport() {
-    App.openModal({
-      title: '📂 Importar Jugadores desde Excel/CSV',
-      body: `
-        <div class="ocr-alert ocr-alert-info" style="margin-bottom:14px">
-          <span>ℹ️</span>
-          <div>
-            <strong>Formato requerido (2 columnas):</strong><br>
-            Columna A: <code>Nombre</code> &nbsp;|&nbsp; Columna B: <code>Alias1, Alias2, Alias3</code><br>
-            <span class="text-xs">Guarda tu Excel como <strong>.csv (UTF-8)</strong> antes de importar.</span>
-          </div>
-        </div>
-        <div style="background:var(--bg-elevated);border-radius:8px;padding:12px;margin-bottom:14px;font-family:monospace;font-size:12px;color:var(--text-muted);white-space:pre">Nombre,Aliases
-Antonio López,"Toño, Tony, Antonio"
-Carlos Pérez,"Carly, Carlitos"
-Alejandro Díaz,Alejo</div>
-        <div class="form-group">
-          <label class="form-label">Seleccionar archivo CSV</label>
-          <input type="file" id="import-csv-file" accept=".csv,.txt" class="form-input" style="padding:8px" />
-        </div>
-        <div id="import-preview" style="max-height:220px;overflow-y:auto"></div>
-      `,
-      footer: `<button class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
-               <button class="btn btn-primary" id="import-confirm-btn" onclick="PlayersPage.confirmImport()" disabled>Importar jugadores</button>`
-    });
-    document.getElementById('import-csv-file')?.addEventListener('change', (e) => this._previewCSV(e.target.files[0]));
-  },
-
-  _csvRows: [],
-
-  _previewCSV(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      const startIdx = lines[0]?.toLowerCase().includes('nombre') ? 1 : 0;
-      this._csvRows = [];
-      for (let i = startIdx; i < lines.length; i++) {
-        const cols = this._parseCSVLine(lines[i]);
-        const name = cols[0]?.trim();
-        if (!name) continue;
-        const rawAliases = cols[1] || '';
-        const aliases = rawAliases.split(',').map(a => a.trim()).filter(Boolean);
-        this._csvRows.push({ name, aliases });
-      }
-      const preview = document.getElementById('import-preview');
-      const btn = document.getElementById('import-confirm-btn');
-      if (!preview) return;
-      if (!this._csvRows.length) {
-        preview.innerHTML = `<div class="text-danger text-sm" style="margin-top:8px">⚠️ No se encontraron jugadores válidos en el archivo.</div>`;
-        if (btn) btn.disabled = true;
-        return;
-      }
-      preview.innerHTML = `
-        <div class="text-sm text-muted" style="margin-bottom:8px">Se importarán <strong>${this._csvRows.length}</strong> jugadores:</div>
-        <table style="width:100%;font-size:13px;border-collapse:collapse">
-          <thead><tr style="color:var(--text-muted);text-align:left">
-            <th style="padding:6px 8px;border-bottom:1px solid var(--border-color)">Nombre</th>
-            <th style="padding:6px 8px;border-bottom:1px solid var(--border-color)">Aliases</th>
-          </tr></thead>
-          <tbody>
-            ${this._csvRows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">
-              <td style="padding:6px 8px;font-weight:600">${Utils.escHtml(r.name)}</td>
-              <td style="padding:6px 8px;color:var(--text-muted)">${r.aliases.length ? Utils.escHtml(r.aliases.join(', ')) : '<em>sin alias</em>'}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`;
-      if (btn) btn.disabled = false;
-    };
-    reader.readAsText(file, 'UTF-8');
-  },
-
-  _parseCSVLine(line) {
-    const result = [];
-    let cur = '', inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQuote = !inQuote; continue; }
-      if (ch === ',' && !inQuote) { result.push(cur); cur = ''; continue; }
-      cur += ch;
-    }
-    result.push(cur);
-    return result;
-  },
-
-  confirmImport() {
-    if (!this._csvRows.length) return;
-    const groupId = Auth.getGroupId();
-    let added = 0, skipped = 0;
-    this._csvRows.forEach(row => {
-      const exists = DB.getPlayers(groupId).some(p => p.name.toLowerCase() === row.name.toLowerCase());
-      if (exists) { skipped++; return; }
-      DB.addPlayer({ name: row.name, aliases: row.aliases, alias: row.aliases[0] || '', notes: '', groupId });
-      added++;
-    });
-    App.closeModal();
-    Toast.success(`✅ ${added} jugadores importados${skipped ? ` (${skipped} ya existían)` : ''}`);
-    this.loadGrid();
-  },
+  // ─── ELIMINADO: LÓGICA REDUNDANTE DE IMPORTACIÓN ───
+  // La importación ahora se maneja centralizadamente en ImportPage (js/pages/import.js)
 
   confirmDelete(id) {
     const p = DB.getPlayerById(id);
