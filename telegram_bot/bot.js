@@ -46,7 +46,7 @@ bot.command('group', (ctx) => {
 
 bot.on('photo', async (ctx) => {
   try {
-    ctx.reply('⏳ Recibido. Analizando en la NUBE con Gemini 1.5...');
+    ctx.reply('⏳ Recibido. Analizando en la NUBE con Gemini 2.0...');
     console.log('📸 Recibida foto para procesar...');
 
     // Obtener la URL de la foto de mayor resolución
