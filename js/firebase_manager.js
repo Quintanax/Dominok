@@ -35,6 +35,63 @@ window.CloudDB = {
     }
   },
 
+  // Resolve player names in Telegram matches to local player IDs.
+  // Tries exact name match, then alias match (case-insensitive).
+  _resolvePlayerIdsInMatch(match, groupId) {
+    const players = DB.getPlayers(groupId);
+
+    const findId = (name) => {
+      if (!name) return null;
+      const q = name.trim().toLowerCase();
+      // 1) Exact name match
+      let p = players.find(p => p.name && p.name.trim().toLowerCase() === q);
+      if (p) return p.id;
+      // 2) Alias match (aliases can be an array or a comma-separated string)
+      p = players.find(p => {
+        const aliases = Array.isArray(p.aliases)
+          ? p.aliases
+          : (p.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+        return aliases.some(a => a.toLowerCase() === q);
+      });
+      if (p) return p.id;
+      return null;
+    };
+
+    let changed = false;
+
+    // team1
+    if (!match.team1.player1 && match.team1.player1Name) {
+      const id = findId(match.team1.player1Name);
+      if (id) { match.team1.player1 = id; changed = true; }
+    }
+    if (!match.team1.player2 && match.team1.player2Name) {
+      const id = findId(match.team1.player2Name);
+      if (id) { match.team1.player2 = id; changed = true; }
+    }
+    // team2
+    if (!match.team2.player1 && match.team2.player1Name) {
+      const id = findId(match.team2.player1Name);
+      if (id) { match.team2.player1 = id; changed = true; }
+    }
+    if (!match.team2.player2 && match.team2.player2Name) {
+      const id = findId(match.team2.player2Name);
+      if (id) { match.team2.player2 = id; changed = true; }
+    }
+
+    // Ensure shoes object exists
+    if (!match.shoes) {
+      match.shoes = { team1Given: 0, team2Given: 0 };
+      changed = true;
+    }
+    // Ensure type exists
+    if (!match.type) {
+      match.type = 'friendly';
+      changed = true;
+    }
+
+    return changed;
+  },
+
   listenToCloud() {
     const db = this._getDb();
     if (!db) {
@@ -91,24 +148,40 @@ window.CloudDB = {
           });
         }
 
-        // Sync matches
+        // Sync matches + resolve player IDs from names (Telegram-origin matches)
         if (Array.isArray(cloudData.matches)) {
           const deletedIds = DB._store.deletedMatchIds || [];
           cloudData.matches.forEach(cm => {
             if (!cm || !cm.id) return;
             if (deletedIds.includes(cm.id)) return; // Ignorar si fue eliminada localmente
-            
+
+            // Resolve names → IDs
+            this._resolvePlayerIdsInMatch(cm, groupId);
+
             const idx = DB._store.matches.findIndex(m => m.id === cm.id);
             if (idx === -1) {
               DB._store.matches.push(cm);
               changed = true;
               console.log('🎮 CloudDB: Nueva partida sincronizada:', cm.id);
-            } else if (JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) {
-              DB._store.matches[idx] = cm;
-              changed = true;
+            } else {
+              // Re-resolve on existing entry in case players were registered after
+              const existingResolved = this._resolvePlayerIdsInMatch(DB._store.matches[idx], groupId);
+              if (existingResolved || JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) {
+                DB._store.matches[idx] = cm;
+                changed = true;
+              }
             }
           });
         }
+
+        // Also re-resolve any existing stored matches that still lack player IDs
+        DB._store.matches.forEach(m => {
+          if (m.groupId === groupId) {
+            const resolved = this._resolvePlayerIdsInMatch(m, groupId);
+            if (resolved) changed = true;
+          }
+        });
+
 
         if (changed) {
           // Persist to localStorage so DB.getMatches() picks it up
