@@ -321,6 +321,28 @@ const App = {
     Toast.info('Sesión cerrada');
   },
 
+  async factoryReset() {
+    if (!confirm('⚠️ PELIGRO: ¿Estás seguro de que deseas BORRAR TODA la información de tu sistema y empezar desde cero? Esto no se puede deshacer.')) return;
+    
+    // Show loading state
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.2rem;flex-direction:column;';
+    overlay.innerHTML = '<div class="loader" style="margin-bottom:15px;width:40px;height:40px;border:4px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><div>Borrando sistema en la nube...</div>';
+    document.body.appendChild(overlay);
+
+    try {
+      if (window.CloudDB && typeof window.CloudDB.wipeCloudData === 'function') {
+        await window.CloudDB.wipeCloudData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
+    localStorage.removeItem('dominostats_db');
+    Auth.logout();
+    location.reload();
+  },
+
   // Layout
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');

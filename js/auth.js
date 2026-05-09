@@ -6,12 +6,18 @@ const Auth = {
   SESSION_KEY: 'dominostats_session',
 
   init() {
-    // ALWAYS bypass login - Change this email to switch views:
-    // User admin: 'admin@demo.com'
-    // User normal: 'juan@demo.com'
-    this.currentUser = DB.getUserByEmail('juan@demo.com');
-    if (this.currentUser) {
-      return true;
+    let sessionStr = sessionStorage.getItem(this.SESSION_KEY);
+    if (!sessionStr) sessionStr = localStorage.getItem(this.SESSION_KEY);
+    
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        const user = DB.getUserById(session.userId);
+        if (user && user.active) {
+          this.currentUser = user;
+          return true;
+        }
+      } catch (e) { console.error('Session parse error', e); }
     }
     return false;
   },
