@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -17,12 +17,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.CloudDB = {
+  _unsubscribe: null,
+
   async syncToCloud() {
     const groupId = Auth.getGroupId();
     if (!groupId) return;
     
     try {
-      // 1. Get current cloud data to avoid overwriting bot matches
       const docSnap = await getDoc(doc(db, "groups", groupId));
       let cloudMatches = [];
       let cloudPlayers = [];
@@ -36,7 +37,6 @@ window.CloudDB = {
       const localPlayers = localData.players.filter(p => p.groupId === groupId);
       const localMatches = localData.matches.filter(m => m.groupId === groupId);
 
-      // 2. Merge (Cloud matches that are not in local yet)
       const mergedMatches = [...localMatches];
       cloudMatches.forEach(cm => {
         if (!mergedMatches.some(lm => lm.id === cm.id)) {
@@ -58,7 +58,6 @@ window.CloudDB = {
       };
 
       await setDoc(doc(db, "groups", groupId), dataToSync, { merge: true });
-      console.log("☁️ Sincronización bidireccional exitosa");
       return true;
     } catch (e) {
       console.error("❌ Error sincronizando con Firebase:", e);
@@ -66,41 +65,55 @@ window.CloudDB = {
     }
   },
 
-  async syncFromCloud() {
+  listenToCloud() {
     const groupId = Auth.getGroupId();
     if (!groupId) return;
 
-    try {
-      const docSnap = await getDoc(doc(db, "groups", groupId));
+    if (this._unsubscribe) {
+        this._unsubscribe();
+    }
+
+    console.log("👂 Iniciando escucha en tiempo real de Firebase...");
+    
+    this._unsubscribe = onSnapshot(doc(db, "groups", groupId), (docSnap) => {
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
+        let changed = false;
         
-        // Merge cloud players into local (avoiding duplicates by ID)
         if (cloudData.players) {
           cloudData.players.forEach(cp => {
             const idx = DB._store.players.findIndex(p => p.id === cp.id);
-            if (idx === -1) DB._store.players.push(cp);
-            else DB._store.players[idx] = cp;
+            if (idx === -1) { DB._store.players.push(cp); changed = true; }
+            else if (JSON.stringify(DB._store.players[idx]) !== JSON.stringify(cp)) { DB._store.players[idx] = cp; changed = true; }
           });
         }
 
-        // Merge cloud matches
         if (cloudData.matches) {
           cloudData.matches.forEach(cm => {
             const idx = DB._store.matches.findIndex(m => m.id === cm.id);
-            if (idx === -1) DB._store.matches.push(cm);
-            else DB._store.matches[idx] = cm;
+            if (idx === -1) { DB._store.matches.push(cm); changed = true; }
+            else if (JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) { DB._store.matches[idx] = cm; changed = true; }
           });
         }
 
-        DB.save();
-        console.log("☁️ Datos descargados desde Firebase");
-        return true;
+        if (changed) {
+          // Bypass DB.save() to avoid infinite loop
+          localStorage.setItem('dominostats_db', JSON.stringify(DB._store));
+          console.log("☁️⚡ Datos actualizados en tiempo real desde Telegram/Firebase");
+          
+          // Refresh UI if necessary
+          if (typeof App !== 'undefined' && App.currentPage) {
+             if (App.currentPage === 'matches' && typeof window.MatchesPage !== 'undefined') {
+                window.MatchesPage.render();
+             } else if (App.currentPage === 'admin_dashboard' && typeof window.AdminDashboard !== 'undefined') {
+                window.AdminDashboard.render();
+             } else {
+                 App.loadPage(App.currentPage);
+             }
+          }
+        }
       }
-    } catch (e) {
-      console.error("❌ Error descargando desde Firebase:", e);
-    }
-    return false;
+    });
   }
 };
 
@@ -111,17 +124,9 @@ DB.save = function() {
   window.CloudDB.syncToCloud();
 };
 
-// Initial sync on load - Faster
+// Initial sync on load using Real-time listener
 setTimeout(() => {
-  console.log("🔄 Iniciando sincronización automática...");
-  window.CloudDB.syncFromCloud().then(success => {
-    if (success) {
-      // Trigger a UI refresh if we are in a page that needs it
-      if (typeof App !== 'undefined' && App.currentPage) {
-         console.log("✨ Datos actualizados, refrescando vista...");
-         // Simple reload to be sure everything is fresh
-         // location.reload(); 
-      }
-    }
-  });
+  if (Auth.isAuthenticated()) {
+      window.CloudDB.listenToCloud();
+  }
 }, 500);
