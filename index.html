@@ -17,15 +17,9 @@
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/ocr.css" />
   
-  <!-- Firebase SDK -->
-  <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
-      }
-    }
-  </script>
+  <!-- Firebase Compat SDK (v8 API — works as regular script, no modules needed) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <!-- Auth Screen -->
@@ -230,7 +224,7 @@
   <script src="js/pages/admin.js"></script>
   <script src="js/pages/admin_dashboard.js"></script>
   <script src="js/pages/global_tournament.js"></script>
-  <script src="js/firebase_manager.js" type="module"></script>
+  <script src="js/firebase_manager.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

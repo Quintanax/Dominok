@@ -130,6 +130,11 @@ const App = {
       this._buildSidebar();
       this.navigate(Auth.isAdmin() ? 'admin_dashboard' : 'dashboard');
       this._loadNotifications();
+
+      // Start real-time Firebase listener now that we have a logged-in user
+      if (typeof window.CloudDB !== 'undefined' && Auth.currentUser) {
+        window.CloudDB.listenToCloud();
+      }
     } catch (e) {
       console.error('Error rendering app:', e);
       // Even if UI update fails, show the app layout
