@@ -102,11 +102,12 @@ window.CloudDB = {
           console.log("☁️⚡ Datos actualizados en tiempo real desde Telegram/Firebase");
           
           // Refresh UI if necessary
+          console.log('☁️⚡ Actualizando interfaz con nuevos datos de Firebase...');
           if (typeof App !== 'undefined' && App.currentPage) {
              if (App.currentPage === 'matches' && typeof window.MatchesPage !== 'undefined') {
-                window.MatchesPage.render();
-             } else if (App.currentPage === 'admin_dashboard' && typeof window.AdminDashboard !== 'undefined') {
-                window.AdminDashboard.render();
+                window.MatchesPage.loadTable();
+             } else if (App.currentPage === 'dashboard' && typeof window.Dashboard !== 'undefined') {
+                App.loadPage('dashboard');
              } else {
                  App.loadPage(App.currentPage);
              }
@@ -138,8 +139,9 @@ DB.save = function() {
 };
 
 // Initial sync on load using Real-time listener
+// Auth.isAuthenticated() doesn't exist; use Auth.currentUser instead
 setTimeout(() => {
-  if (Auth.isAuthenticated()) {
+  if (Auth.currentUser) {
       window.CloudDB.listenToCloud();
   }
 }, 500);
