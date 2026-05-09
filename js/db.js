@@ -43,8 +43,8 @@ const DB = {
     const demoEmail = 'admin@demo.com';
     const userExists = this._store.users.some(u => u.email && u.email.toLowerCase() === demoEmail);
     if (!userExists) {
-      const adminId = this._uuid();
-      const group1Id = this._uuid();
+      const adminId = 'admin_demo_user';
+      const group1Id = 'dominostats_demo_group';
       this._store.groups.push({ id: group1Id, name: 'Club Dominó Carabobo', adminId: adminId, createdAt: this._daysAgo(90), active: true });
       this._store.users.push({
         id: adminId, name: 'Admin Global', email: demoEmail,

@@ -111,7 +111,17 @@ DB.save = function() {
   window.CloudDB.syncToCloud();
 };
 
-// Initial sync on load
+// Initial sync on load - Faster
 setTimeout(() => {
-  window.CloudDB.syncFromCloud();
-}, 2000);
+  console.log("🔄 Iniciando sincronización automática...");
+  window.CloudDB.syncFromCloud().then(success => {
+    if (success) {
+      // Trigger a UI refresh if we are in a page that needs it
+      if (typeof App !== 'undefined' && App.currentPage) {
+         console.log("✨ Datos actualizados, refrescando vista...");
+         // Simple reload to be sure everything is fresh
+         // location.reload(); 
+      }
+    }
+  });
+}, 500);
