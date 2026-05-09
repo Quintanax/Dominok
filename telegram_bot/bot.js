@@ -11,9 +11,15 @@ let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group';
 
 // 2. INICIALIZAR FIREBASE
 if (!process.env.FIREBASE_CREDENTIALS) {
-  console.error('❌ ERROR: La variable FIREBASE_CREDENTIALS está vacía en Railway');
+  console.error('❌ ERROR: FIREBASE_CREDENTIALS no configurada');
 }
 const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS || '{}');
+
+// Fix para saltos de línea en la llave privada
+if (firebaseCredentials.private_key) {
+  firebaseCredentials.private_key = firebaseCredentials.private_key.replace(/\\n/g, '\n');
+}
+
 admin.initializeApp({
   credential: admin.credential.cert(firebaseCredentials)
 });
