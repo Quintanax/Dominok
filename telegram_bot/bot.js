@@ -16,17 +16,14 @@ const firebaseConfig = {
   private_key: process.env.FIREBASE_PRIVATE_KEY
 };
 
+let debugInfo = `Project: ${firebaseConfig.project_id || 'FALTANTE'}\nEmail: ${firebaseConfig.client_email ? 'OK' : 'FALTANTE'}\nKey: ${firebaseConfig.private_key ? 'OK (' + firebaseConfig.private_key.length + ' chars)' : 'FALTANTE'}`;
+
 // Limpieza ultra-profunda de la llave para Railway
 if (firebaseConfig.private_key) {
-    // Quitar comillas si existen
     firebaseConfig.private_key = firebaseConfig.private_key.trim().replace(/^["']|["']$/g, '');
-    
-    // Arreglar saltos de línea (maneja \n literales y saltos reales)
     if (firebaseConfig.private_key.includes('\\n')) {
         firebaseConfig.private_key = firebaseConfig.private_key.replace(/\\n/g, '\n');
     }
-    
-    // Asegurar que empiece y termine correctamente
     if (!firebaseConfig.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
         firebaseConfig.private_key = `-----BEGIN PRIVATE KEY-----\n${firebaseConfig.private_key}`;
     }
@@ -35,17 +32,17 @@ if (firebaseConfig.private_key) {
     }
 }
 
-if (!firebaseConfig.project_id) {
-  console.error('❌ ERROR: No se encontraron credenciales de Firebase (Project ID faltante)');
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      project_id: firebaseConfig.project_id,
+      client_email: firebaseConfig.client_email,
+      private_key: firebaseConfig.private_key
+    })
+  });
+} catch (e) {
+  debugInfo += `\nError Init: ${e.message}`;
 }
-
-admin.initializeApp({
-  credential: admin.credential.cert({
-    project_id: firebaseConfig.project_id,
-    client_email: firebaseConfig.client_email,
-    private_key: firebaseConfig.private_key
-  })
-});
 const db = admin.firestore();
 
 // 3. INICIALIZAR GROQ
@@ -154,7 +151,7 @@ bot.on('photo', async (ctx) => {
 
   } catch (error) {
     console.error('Error detallado:', error);
-    ctx.reply('❌ Hubo un error procesando la imagen con Groq: ' + error.message);
+    ctx.reply(`❌ Error procesando imagen:\n\n${error.message}\n\n--- DIAGNÓSTICO ---\n${debugInfo}`);
   }
 });
 
