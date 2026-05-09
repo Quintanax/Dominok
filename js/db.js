@@ -145,8 +145,20 @@ const DB = {
   importPlayers(players, groupId) {
     const imported = [];
     for (const p of players) {
-      if (!p.name) continue;
-      const player = this.addPlayer({ name: p.name, alias: p.alias || '', groupId, notes: p.notes || '' });
+      const name = p.name || p.nombre;
+      if (!name) continue;
+      
+      const rawAliases = p.aliases || p.alias || '';
+      // Support comma-separated aliases
+      const aliasesArray = typeof rawAliases === 'string' ? rawAliases.split(',').map(a => a.trim()).filter(Boolean) : Array.isArray(rawAliases) ? rawAliases : [];
+      
+      const player = this.addPlayer({ 
+        name: name, 
+        aliases: aliasesArray, 
+        alias: aliasesArray[0] || '', // backwards compatibility
+        groupId, 
+        notes: p.notes || p.notas || '' 
+      });
       imported.push(player);
     }
     return imported;
