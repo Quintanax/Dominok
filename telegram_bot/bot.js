@@ -10,7 +10,10 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group'; 
 
 // 2. INICIALIZAR FIREBASE
-const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+if (!process.env.FIREBASE_CREDENTIALS) {
+  console.error('❌ ERROR: La variable FIREBASE_CREDENTIALS está vacía en Railway');
+}
+const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS || '{}');
 admin.initializeApp({
   credential: admin.credential.cert(firebaseCredentials)
 });
