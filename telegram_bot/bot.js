@@ -10,18 +10,34 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group'; 
 
 // 2. INICIALIZAR FIREBASE
-if (!process.env.FIREBASE_CREDENTIALS) {
-  console.error('❌ ERROR: FIREBASE_CREDENTIALS no configurada');
-}
-const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS || '{}');
+const firebaseConfig = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined
+};
 
-// Fix para saltos de línea en la llave privada
-if (firebaseCredentials.private_key) {
-  firebaseCredentials.private_key = firebaseCredentials.private_key.replace(/\\n/g, '\n');
+// Si no existen las variables individuales, intentar con el JSON (Retrocompatibilidad)
+if (!firebaseConfig.projectId && process.env.FIREBASE_CREDENTIALS) {
+  try {
+    const creds = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+    firebaseConfig.projectId = creds.project_id;
+    firebaseConfig.clientEmail = creds.client_email;
+    firebaseConfig.privateKey = creds.private_key.replace(/\\n/g, '\n');
+  } catch (e) {
+    console.error('❌ Error parseando FIREBASE_CREDENTIALS:', e.message);
+  }
+}
+
+if (!firebaseConfig.projectId) {
+  console.error('❌ ERROR: No se encontraron credenciales de Firebase (Project ID faltante)');
 }
 
 admin.initializeApp({
-  credential: admin.credential.cert(firebaseCredentials)
+  credential: admin.credential.cert({
+    projectId: firebaseConfig.projectId,
+    clientEmail: firebaseConfig.clientEmail,
+    privateKey: firebaseConfig.privateKey
+  })
 });
 const db = admin.firestore();
 
