@@ -93,8 +93,11 @@ window.CloudDB = {
 
         // Sync matches
         if (Array.isArray(cloudData.matches)) {
+          const deletedIds = DB._store.deletedMatchIds || [];
           cloudData.matches.forEach(cm => {
             if (!cm || !cm.id) return;
+            if (deletedIds.includes(cm.id)) return; // Ignorar si fue eliminada localmente
+            
             const idx = DB._store.matches.findIndex(m => m.id === cm.id);
             if (idx === -1) {
               DB._store.matches.push(cm);
@@ -162,9 +165,11 @@ window.CloudDB = {
       const localPlayers = DB._store.players.filter(p => p.groupId === groupId);
       const localMatches = DB._store.matches.filter(m => m.groupId === groupId);
 
+      const deletedIds = DB._store.deletedMatchIds || [];
+
       const mergedMatches = [...localMatches];
       cloudMatches.forEach(cm => {
-        if (!mergedMatches.some(lm => lm.id === cm.id)) mergedMatches.push(cm);
+        if (!deletedIds.includes(cm.id) && !mergedMatches.some(lm => lm.id === cm.id)) mergedMatches.push(cm);
       });
 
       const mergedPlayers = [...localPlayers];

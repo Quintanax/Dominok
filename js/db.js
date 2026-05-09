@@ -183,6 +183,8 @@ const DB = {
   },
   deleteMatch(id) {
     this._store.matches = this._store.matches.filter(m => m.id !== id);
+    if (!this._store.deletedMatchIds) this._store.deletedMatchIds = [];
+    this._store.deletedMatchIds.push(id);
     this.save();
     this.addLog({ action: 'match_deleted', desc: `Partida eliminada: ${id}` });
   },
