@@ -13,8 +13,16 @@ let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group';
 const firebaseConfig = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined
+  privateKey: process.env.FIREBASE_PRIVATE_KEY
 };
+
+// Limpieza profunda de la Private Key para evitar errores de DECODER/OpenSSL
+if (firebaseConfig.privateKey) {
+  // Quitar comillas si existen al principio/final
+  firebaseConfig.privateKey = firebaseConfig.privateKey.trim().replace(/^["']|["']$/g, '');
+  // Convertir \n literales en saltos de línea reales
+  firebaseConfig.privateKey = firebaseConfig.privateKey.replace(/\\n/g, '\n');
+}
 
 // Si no existen las variables individuales, intentar con el JSON (Retrocompatibilidad)
 if (!firebaseConfig.projectId && process.env.FIREBASE_CREDENTIALS) {
