@@ -39,45 +39,18 @@ const DB = {
     if (!this._store.tournament_groups) this._store.tournament_groups = [];
     if (!this._store.tournament_rounds) this._store.tournament_rounds = [];
 
-    // Ensure demo admin exists
+    // Ensure demo admin exists for bot connection
     const demoEmail = 'admin@demo.com';
     const userExists = this._store.users.some(u => u.email && u.email.toLowerCase() === demoEmail);
     if (!userExists) {
       const adminId = 'admin_demo_user';
       const group1Id = 'dominostats_demo_group';
-      this._store.groups.push({ id: group1Id, name: 'Club Dominó Carabobo', adminId: adminId, createdAt: this._daysAgo(90), active: true });
+      this._store.groups.push({ id: group1Id, name: 'Mi Club Dominó', adminId: adminId, createdAt: this._daysAgo(0), active: true });
       this._store.users.push({
-        id: adminId, name: 'Admin Global', email: demoEmail,
+        id: adminId, name: 'Administrador', email: demoEmail,
         password: 'admin123', role: 'admin', groupId: group1Id,
-        createdAt: this._daysAgo(90), avatar: null, active: true
+        createdAt: this._daysAgo(0), avatar: null, active: true
       });
-      this.save();
-    }
-
-    // Ensure Juan Pérez (normal user) exists
-    if (!this._store.users.find(u => u.email === 'juan@demo.com')) {
-      this._store.users.push({
-        id: this._uuid(), name: 'Juan Pérez', email: 'juan@demo.com',
-        password: 'juan123', role: 'user', groupId: this._store.groups[0]?.id || 'unknown',
-        createdAt: this._daysAgo(5), avatar: null, active: true
-      });
-      this.save();
-    }
-
-    // Ensure usuario1 exists
-    if (!this._store.users.find(u => u.email === 'usuario1')) {
-      const user1Id = this._uuid();
-      const group3Id = this._uuid();
-      this._store.users.push({
-        id: user1Id, name: 'Usuario Prueba', email: 'usuario1',
-        password: '123456', role: 'group_admin', groupId: group3Id,
-        createdAt: this._daysAgo(1), avatar: null, active: true
-      });
-      this._store.groups.push({ id: group3Id, name: 'Club de Prueba', adminId: user1Id, createdAt: this._daysAgo(1), active: true });
-      this._store.players.push(
-        { id: this._uuid(), name: 'Juan Pérez', alias: 'Juancho', groupId: group3Id, createdAt: this._daysAgo(1), active: true, avatar: null, notes: '' },
-        { id: this._uuid(), name: 'Ana Ruiz', alias: 'Anita', groupId: group3Id, createdAt: this._daysAgo(1), active: true, avatar: null, notes: '' }
-      );
       this.save();
     }
 
@@ -89,128 +62,7 @@ const DB = {
   },
 
   _seedData() {
-    // Seed admin user
-    const adminId = this._uuid();
-    const group1Id = this._uuid();
-    const group2Id = this._uuid();
-    const user1Id = this._uuid();
-    const group3Id = this._uuid();
-
-    this._store.users = [
-      {
-        id: adminId, name: 'Admin Global', email: 'admin@demo.com',
-        password: 'admin123', role: 'admin', groupId: group1Id,
-        createdAt: this._daysAgo(90), avatar: null, active: true
-      },
-      {
-        id: this._uuid(), name: 'Carlos Rodríguez', email: 'carlos@demo.com',
-        password: 'carlos123', role: 'group_admin', groupId: group1Id,
-        createdAt: this._daysAgo(60), avatar: null, active: true
-      },
-      {
-        id: this._uuid(), name: 'María González', email: 'maria@demo.com',
-        password: 'maria123', role: 'user', groupId: group2Id,
-        createdAt: this._daysAgo(30), avatar: null, active: true
-      },
-      {
-        id: user1Id, name: 'Usuario Prueba', email: 'usuario1',
-        password: '123456', role: 'group_admin', groupId: group3Id,
-        createdAt: this._daysAgo(1), avatar: null, active: true
-      },
-      {
-        id: this._uuid(), name: 'Juan Pérez', email: 'juan@demo.com',
-        password: 'juan123', role: 'user', groupId: group1Id,
-        createdAt: this._daysAgo(5), avatar: null, active: true
-      }
-    ];
-
-    this._store.groups = [
-      { id: group1Id, name: 'Club Dominó Carabobo', adminId: adminId, createdAt: this._daysAgo(90), active: true },
-      { id: group2Id, name: 'Liga Maracay', adminId: this._store.users[2].id, createdAt: this._daysAgo(30), active: true },
-      { id: group3Id, name: 'Club de Prueba', adminId: user1Id, createdAt: this._daysAgo(1), active: true }
-    ];
-
-    // Seed players
-    const playerNames = [
-      ['Pedro Martínez', 'El Toro'], ['José Ramírez', 'Pepe'], ['Luis Hernández', 'Lucho'],
-      ['Carlos Pérez', 'Carly'], ['Roberto Silva', 'Beto'], ['Miguel Torres', 'El Gato'],
-      ['Antonio López', 'Toño'], ['Fernando García', 'Nando'], ['Rafael Sánchez', 'Rafi'],
-      ['Alejandro Díaz', 'Alejo']
-    ];
-
-    this._store.players = playerNames.map((p, i) => ({
-      id: this._uuid(), name: p[0], alias: p[1], groupId: group1Id,
-      createdAt: this._daysAgo(80 - i * 3), active: true,
-      avatar: null, notes: ''
-    }));
-
-    // Seed some players for the new user as well
-    const user1Players = [
-      { id: this._uuid(), name: 'Juan Pérez', alias: 'Juancho', groupId: group3Id, createdAt: this._daysAgo(1), active: true, avatar: null, notes: '' },
-      { id: this._uuid(), name: 'Ana Ruiz', alias: 'Anita', groupId: group3Id, createdAt: this._daysAgo(1), active: true, avatar: null, notes: '' }
-    ];
-    this._store.players.push(...user1Players);
-
-    // Seed matches (past 60 days, ~80 matches)
-    this._seedMatches(group1Id);
-
-    // Seed notifications
-    this._store.notifications = [
-      { id: this._uuid(), title: 'Nueva partida registrada', desc: 'Pedro vs Carlos — 200:150', type: 'match', read: false, createdAt: this._minutesAgo(5) },
-      { id: this._uuid(), title: 'Jugador añadido', desc: 'Miguel Torres se unió al grupo', type: 'player', read: false, createdAt: this._minutesAgo(30) },
-      { id: this._uuid(), title: 'Racha activa', desc: 'José Ramírez lleva 5 victorias seguidas', type: 'streak', read: false, createdAt: this._hoursAgo(2) },
-      { id: this._uuid(), title: 'Backup completado', desc: 'Copia de seguridad automática realizada', type: 'system', read: true, createdAt: this._hoursAgo(12) }
-    ];
-
-    // Seed activity logs
-    this._store.logs = [
-      { id: this._uuid(), action: 'match_created', desc: 'Se registró nueva partida amistosa', userId: adminId, createdAt: this._minutesAgo(5) },
-      { id: this._uuid(), action: 'player_added', desc: 'Nuevo jugador: Miguel Torres', userId: adminId, createdAt: this._minutesAgo(30) },
-      { id: this._uuid(), action: 'match_created', desc: 'Se registró partida de torneo', userId: adminId, createdAt: this._hoursAgo(1) },
-      { id: this._uuid(), action: 'player_edited', desc: 'Datos de Pedro actualizados', userId: adminId, createdAt: this._hoursAgo(3) },
-      { id: this._uuid(), action: 'backup', desc: 'Backup automático completado', userId: 'system', createdAt: this._hoursAgo(12) }
-    ];
-
-    this.save();
-  },
-
-  _seedMatches(groupId) {
-    const players = this._store.players;
-    const matches = [];
-    const today = new Date();
-
-    for (let d = 60; d >= 0; d--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - d);
-      const numMatches = Math.floor(Math.random() * 3) + 1;
-
-      for (let m = 0; m < numMatches; m++) {
-        // Pick 4 different players
-        const shuffled = [...players].sort(() => Math.random() - 0.5);
-        const [p1, p2, p3, p4] = shuffled;
-        const team1Score = Math.floor(Math.random() * 100) + 150;
-        const team2Score = Math.floor(Math.random() * 100) + 100;
-        const team1Wins = team1Score > team2Score;
-        const shoes1 = Math.random() < 0.15 ? 1 : 0;
-        const shoes2 = Math.random() < 0.1 ? 1 : 0;
-        const isTournament = Math.random() < 0.3;
-
-        matches.push({
-          id: this._uuid(),
-          groupId,
-          type: isTournament ? 'tournament' : 'friendly',
-          date: date.toISOString().split('T')[0],
-          team1: { player1: p1.id, player2: p2.id },
-          team2: { player1: p3.id, player2: p4.id },
-          score: { team1: team1Score, team2: team2Score },
-          winner: team1Wins ? 'team1' : 'team2',
-          shoes: { team1Given: shoes1, team2Given: shoes2 },
-          notes: '',
-          createdAt: date.toISOString()
-        });
-      }
-    }
-    this._store.matches = matches;
+    // Blank slate
   },
 
   _uuid() {
