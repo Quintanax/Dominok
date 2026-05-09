@@ -321,26 +321,45 @@ const App = {
     Toast.info('Sesión cerrada');
   },
 
-  async factoryReset() {
-    if (!confirm('⚠️ PELIGRO: ¿Estás seguro de que deseas BORRAR TODA la información de tu sistema y empezar desde cero? Esto no se puede deshacer.')) return;
+  async wipeMyData() {
+    if (!confirm('⚠️ PELIGRO: ¿Estás seguro de que deseas ELIMINAR toda tu información (partidas, torneos, jugadores)? Tu cuenta seguirá existiendo pero vacía. Esto no se puede deshacer.')) return;
     
     // Show loading state
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.2rem;flex-direction:column;';
-    overlay.innerHTML = '<div class="loader" style="margin-bottom:15px;width:40px;height:40px;border:4px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><div>Borrando sistema en la nube...</div>';
+    overlay.innerHTML = '<div class="loader" style="margin-bottom:15px;width:40px;height:40px;border:4px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div><div>Borrando tu información...</div>';
     document.body.appendChild(overlay);
 
     try {
+      const groupId = Auth.getGroupId();
+
+      // 1. Wipe from Firebase Cloud (if active)
       if (window.CloudDB && typeof window.CloudDB.wipeCloudData === 'function') {
         await window.CloudDB.wipeCloudData();
       }
+
+      // 2. Wipe from Local DB
+      DB._store.players = DB._store.players.filter(p => p.groupId !== groupId);
+      DB._store.matches = DB._store.matches.filter(m => m.groupId !== groupId);
+      DB._store.tournaments = DB._store.tournaments.filter(t => t.groupId !== groupId);
+      DB._store.tournament_matches = DB._store.tournament_matches.filter(m => m.groupId !== groupId);
+      DB._store.tournament_players = DB._store.tournament_players.filter(p => p.groupId !== groupId);
+      DB._store.tournament_teams = DB._store.tournament_teams.filter(t => t.groupId !== groupId);
+      
+      // Clear notifications and logs related to the user
+      const userId = Auth.currentUser.id;
+      DB._store.notifications = [];
+      DB._store.logs = DB._store.logs.filter(l => l.userId !== userId);
+
+      DB.save();
+      
+      // Reload UI
+      location.reload();
     } catch (e) {
       console.error(e);
+      Toast.error('Error al borrar los datos.');
+      overlay.remove();
     }
-    
-    localStorage.removeItem('dominostats_db');
-    Auth.logout();
-    location.reload();
   },
 
   // Layout
