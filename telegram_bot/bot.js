@@ -11,40 +11,39 @@ let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group';
 
 // 2. INICIALIZAR FIREBASE
 const firebaseConfig = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  private_key: process.env.FIREBASE_PRIVATE_KEY
 };
 
-// Limpieza profunda de la Private Key para evitar errores de DECODER/OpenSSL
-if (firebaseConfig.privateKey) {
-  // Quitar comillas si existen al principio/final
-  firebaseConfig.privateKey = firebaseConfig.privateKey.trim().replace(/^["']|["']$/g, '');
-  // Convertir \n literales en saltos de línea reales
-  firebaseConfig.privateKey = firebaseConfig.privateKey.replace(/\\n/g, '\n');
+// Limpieza ultra-profunda de la llave para Railway
+if (firebaseConfig.private_key) {
+    // Quitar comillas si existen
+    firebaseConfig.private_key = firebaseConfig.private_key.trim().replace(/^["']|["']$/g, '');
+    
+    // Arreglar saltos de línea (maneja \n literales y saltos reales)
+    if (firebaseConfig.private_key.includes('\\n')) {
+        firebaseConfig.private_key = firebaseConfig.private_key.replace(/\\n/g, '\n');
+    }
+    
+    // Asegurar que empiece y termine correctamente
+    if (!firebaseConfig.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
+        firebaseConfig.private_key = `-----BEGIN PRIVATE KEY-----\n${firebaseConfig.private_key}`;
+    }
+    if (!firebaseConfig.private_key.includes('-----END PRIVATE KEY-----')) {
+        firebaseConfig.private_key = `${firebaseConfig.private_key}\n-----END PRIVATE KEY-----\n`;
+    }
 }
 
-// Si no existen las variables individuales, intentar con el JSON (Retrocompatibilidad)
-if (!firebaseConfig.projectId && process.env.FIREBASE_CREDENTIALS) {
-  try {
-    const creds = JSON.parse(process.env.FIREBASE_CREDENTIALS);
-    firebaseConfig.projectId = creds.project_id;
-    firebaseConfig.clientEmail = creds.client_email;
-    firebaseConfig.privateKey = creds.private_key.replace(/\\n/g, '\n');
-  } catch (e) {
-    console.error('❌ Error parseando FIREBASE_CREDENTIALS:', e.message);
-  }
-}
-
-if (!firebaseConfig.projectId) {
+if (!firebaseConfig.project_id) {
   console.error('❌ ERROR: No se encontraron credenciales de Firebase (Project ID faltante)');
 }
 
 admin.initializeApp({
   credential: admin.credential.cert({
-    project_id: firebaseConfig.projectId,
-    client_email: firebaseConfig.clientEmail,
-    private_key: firebaseConfig.privateKey
+    project_id: firebaseConfig.project_id,
+    client_email: firebaseConfig.client_email,
+    private_key: firebaseConfig.private_key
   })
 });
 const db = admin.firestore();
