@@ -123,6 +123,7 @@ const AdminPage = {
               <thead>
                 <tr>
                   <th>Grupo/Equipo</th>
+                  <th>ID</th>
                   <th class="col-num">Integrantes</th>
                   <th class="col-num">Actividad</th>
                   <th>Admin de Grupo</th>
@@ -141,6 +142,7 @@ const AdminPage = {
                       <div style="font-weight:700">${Utils.escHtml(g.name)}</div>
                       <div class="text-xs text-muted">Desde: ${Utils.fmtDate(g.createdAt)}</div>
                     </td>
+                    <td class="text-xs"><code>${g.id}</code></td>
                     <td class="col-num">${players}</td>
                     <td class="col-num">${matches}</td>
                     <td>
@@ -150,6 +152,7 @@ const AdminPage = {
                     <td><span class="badge ${g.active?'badge-success':'badge-danger'}">${g.active?'✅ Activo':'🚫 Suspendido'}</span></td>
                     <td>
                       <div class="row-actions">
+                        <button class="row-action-btn" onclick="Utils.copyToClipboard('${g.id}');Toast.success('ID copiado')" title="Copiar ID">📋</button>
                         <button class="row-action-btn" onclick="AdminPage.toggleGroupActive('${g.id}',${!g.active})" title="Suspender/Activar">
                           ${g.active ? '🔒' : '🔓'}
                         </button>
