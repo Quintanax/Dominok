@@ -134,11 +134,13 @@ bot.on('photo', async (ctx) => {
     const newMatches = data.partidas.map(p => ({
       id: Date.now() + Math.random().toString(36).substr(2, 9),
       groupId: DEFAULT_GROUP_ID,
+      type: 'friendly',
       date: new Date().toISOString().split('T')[0],
       team1: { player1Name: p.p1_j1, player2Name: p.p1_j2 },
       team2: { player1Name: p.p2_j1, player2Name: p.p2_j2 },
       score: { team1: p.p1_pts, team2: p.p2_pts },
       winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
+      shoes: { team1Given: 0, team2Given: 0 },
       notes: 'Registrado vía Telegram (Groq)'
     }));
 

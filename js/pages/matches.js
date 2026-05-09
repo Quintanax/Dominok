@@ -59,7 +59,7 @@ const MatchesPage = {
 
   getFiltered() {
     const groupId = Auth.getGroupId();
-    let matches = DB.getMatches(groupId).filter(m => m.type === 'friendly');
+    let matches = DB.getMatches(groupId).filter(m => m.type === 'friendly' || !m.type);
     const { filter, search } = this.state;
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
@@ -70,8 +70,12 @@ const MatchesPage = {
     if (search) {
       const q = search.toLowerCase();
       matches = matches.filter(m => {
-        const names = [m.team1.player1, m.team1.player2, m.team2.player1, m.team2.player2]
-          .map(id => Utils.playerName(id).toLowerCase());
+        const names = [
+          m.team1.player1Name || Utils.playerName(m.team1.player1),
+          m.team1.player2Name || Utils.playerName(m.team1.player2),
+          m.team2.player1Name || Utils.playerName(m.team2.player1),
+          m.team2.player2Name || Utils.playerName(m.team2.player2)
+        ].map(n => n.toLowerCase());
         return names.some(n => n.includes(q));
       });
     }
@@ -87,10 +91,14 @@ const MatchesPage = {
     if (!tbody) return;
 
     tbody.innerHTML = paged.items.map(m => {
-      const t1n = `${Utils.escHtml(Utils.playerName(m.team1.player1))} & ${Utils.escHtml(Utils.playerName(m.team1.player2))}`;
-      const t2n = `${Utils.escHtml(Utils.playerName(m.team2.player1))} & ${Utils.escHtml(Utils.playerName(m.team2.player2))}`;
+      const p1_t1 = m.team1.player1Name || Utils.playerName(m.team1.player1);
+      const p2_t1 = m.team1.player2Name || Utils.playerName(m.team1.player2);
+      const p1_t2 = m.team2.player1Name || Utils.playerName(m.team2.player1);
+      const p2_t2 = m.team2.player2Name || Utils.playerName(m.team2.player2);
+      const t1n = `${Utils.escHtml(p1_t1)} & ${Utils.escHtml(p2_t1)}`;
+      const t2n = `${Utils.escHtml(p1_t2)} & ${Utils.escHtml(p2_t2)}`;
       const w1 = m.winner === 'team1';
-      const shoesInfo = (m.shoes.team1Given || 0) + (m.shoes.team2Given || 0);
+      const shoesInfo = ((m.shoes && m.shoes.team1Given) || 0) + ((m.shoes && m.shoes.team2Given) || 0);
       return `<tr>
         <td>${Utils.fmtDate(m.date)}</td>
         <td>
