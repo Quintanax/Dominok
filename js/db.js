@@ -21,7 +21,6 @@ const DB = {
         notifications: [], logs: [], settings: {}
       };
       this._seedData();
-      return this;
     }
 
     // Ensure core tables exist after loading
