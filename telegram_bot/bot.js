@@ -102,16 +102,33 @@ bot.on('photo', async (ctx) => {
     const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
 
-    const prompt = `Analiza esta imagen de resultados de dominó. Extrae todas las partidas.
-    Devuelve un JSON estrictamente con esta estructura:
+    const prompt = `Analiza esta imagen de resultados de dominó y extrae la información de la partida.
+
+ESTRUCTURA VISUAL DE LA IMAGEN:
+1. En los extremos laterales están los jugadores con sus puntos de ranking (+2 o -2). IGNORA COMPLETAMENTE ESTOS NÚMEROS (+2, -2, etc.).
+2. En el centro exacto de la imagen, hay un logo "VS".
+3. Justo debajo o al lado del logo "VS", dice "Puntos Totales".
+4. Debajo de "Puntos Totales" hay dos números separados por ":" (ejemplo: 41 : 116). ESTOS SON LOS ÚNICOS PUNTOS VÁLIDOS DEL PARTIDO.
+
+Devuelve SOLO un JSON con esta estructura exacta:
+{
+  "partidas": [
     {
-      "partidas": [
-        {
-          "p1_j1": "nombre", "p1_j2": "nombre", "p1_pts": 0,
-          "p2_j1": "nombre", "p2_j2": "nombre", "p2_pts": 0
-        }
-      ]
-    }`;
+      "p1_j1": "nombre del jugador 1 (izquierda)",
+      "p1_j1_num": "número/ID debajo del nombre (ej: 3879478)",
+      "p1_j2": "nombre del jugador 2 (izquierda)",
+      "p1_j2_num": "número/ID debajo del nombre",
+      "p2_j1": "nombre del jugador 1 (derecha)",
+      "p2_j1_num": "número/ID debajo del nombre",
+      "p2_j2": "nombre del jugador 2 (derecha)",
+      "p2_j2_num": "número/ID debajo del nombre",
+      "p1_pts": 41, 
+      "p2_pts": 116
+    }
+  ]
+}
+
+REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la imagen, NUNCA los +/-2 de los lados.`;
 
     console.log('🤖 Enviando a Groq...');
     const text = await callGroq(prompt, base64Image);
@@ -130,19 +147,47 @@ bot.on('photo', async (ctx) => {
     const groupRef = db.collection('groups').doc(DEFAULT_GROUP_ID);
     const doc = await groupRef.get();
     const groupData = doc.exists ? doc.data() : { matches: [], players: [] };
+    const players = groupData.players || [];
 
-    const newMatches = data.partidas.map(p => ({
-      id: Date.now() + Math.random().toString(36).substr(2, 9),
-      groupId: DEFAULT_GROUP_ID,
-      type: 'friendly',
-      date: new Date().toISOString().split('T')[0],
-      team1: { player1Name: p.p1_j1, player2Name: p.p1_j2 },
-      team2: { player1Name: p.p2_j1, player2Name: p.p2_j2 },
-      score: { team1: p.p1_pts, team2: p.p2_pts },
-      winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
-      shoes: { team1Given: 0, team2Given: 0 },
-      notes: 'Registrado vía Telegram (Groq)'
-    }));
+    // Función para encontrar ID de jugador por nombre o número (alias)
+    const findId = (name, num) => {
+      const p = players.find(x => 
+        (num && String(x.alias) === String(num)) || 
+        (x.name.toLowerCase() === name?.toLowerCase()) ||
+        (x.alias?.toLowerCase() === name?.toLowerCase())
+      );
+      return p ? p.id : null;
+    };
+
+    const newMatches = data.partidas.map(p => {
+      const p1_j1_id = findId(p.p1_j1, p.p1_j1_num);
+      const p1_j2_id = findId(p.p1_j2, p.p1_j2_num);
+      const p2_j1_id = findId(p.p2_j1, p.p2_j1_num);
+      const p2_j2_id = findId(p.p2_j2, p.p2_j2_num);
+
+      return {
+        id: Date.now() + Math.random().toString(36).substr(2, 9),
+        groupId: DEFAULT_GROUP_ID,
+        type: 'friendly',
+        date: new Date().toISOString().split('T')[0],
+        team1: { 
+          player1: p1_j1_id, 
+          player2: p1_j2_id,
+          player1Name: p.p1_j1,
+          player2Name: p.p1_j2
+        },
+        team2: { 
+          player1: p2_j1_id, 
+          player2: p2_j2_id,
+          player1Name: p.p2_j1,
+          player2Name: p.p2_j2
+        },
+        score: { team1: p.p1_pts, team2: p.p2_pts },
+        winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
+        shoes: { team1Given: 0, team2Given: 0 },
+        notes: 'Registrado vía Telegram (Groq)'
+      };
+    });
 
     groupData.matches = [...(groupData.matches || []), ...newMatches];
     await groupRef.set(groupData, { merge: true });
