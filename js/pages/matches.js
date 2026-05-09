@@ -91,10 +91,10 @@ const MatchesPage = {
     if (!tbody) return;
 
     tbody.innerHTML = paged.items.map(m => {
-      const p1_t1 = m.team1.player1Name || Utils.playerName(m.team1.player1);
-      const p2_t1 = m.team1.player2Name || Utils.playerName(m.team1.player2);
-      const p1_t2 = m.team2.player1Name || Utils.playerName(m.team2.player1);
-      const p2_t2 = m.team2.player2Name || Utils.playerName(m.team2.player2);
+      const p1_t1 = Utils.playerName(m.team1.player1) !== 'Desconocido' ? Utils.playerName(m.team1.player1) : (m.team1.player1Name || 'Desconocido');
+      const p2_t1 = Utils.playerName(m.team1.player2) !== 'Desconocido' ? Utils.playerName(m.team1.player2) : (m.team1.player2Name || 'Desconocido');
+      const p1_t2 = Utils.playerName(m.team2.player1) !== 'Desconocido' ? Utils.playerName(m.team2.player1) : (m.team2.player1Name || 'Desconocido');
+      const p2_t2 = Utils.playerName(m.team2.player2) !== 'Desconocido' ? Utils.playerName(m.team2.player2) : (m.team2.player2Name || 'Desconocido');
       const t1n = `${Utils.escHtml(p1_t1)} & ${Utils.escHtml(p2_t1)}`;
       const t2n = `${Utils.escHtml(p1_t2)} & ${Utils.escHtml(p2_t2)}`;
       const w1 = m.winner === 'team1';
