@@ -114,6 +114,19 @@ window.CloudDB = {
         }
       }
     });
+  },
+
+  async wipeCloudData() {
+    const groupId = Auth.getGroupId();
+    if (!groupId) return;
+    try {
+      console.log("🧹 Borrando datos de Firebase...");
+      await setDoc(doc(db, "groups", groupId), { players: [], matches: [], lastSync: new Date().toISOString() });
+      return true;
+    } catch (e) {
+      console.error("❌ Error borrando Firebase:", e);
+      return false;
+    }
   }
 };
 

@@ -147,6 +147,7 @@
             <a href="#" onclick="App.navigate('profile')">👤 Mi Perfil</a>
             <a href="#" onclick="App.navigate('admin')">⚙️ Configuración</a>
             <hr />
+            <a href="#" onclick="if(confirm('⚠️ PELIGRO: ¿Estás seguro de que deseas BORRAR TODA la información de tu sistema y empezar desde cero? Esto no se puede deshacer.')){ if(window.CloudDB){ window.CloudDB.wipeCloudData(); } localStorage.removeItem('dominostats_db'); location.reload(); }" class="logout-link" style="color: #ff4d6d;">⚠️ Borrar Todo el Sistema</a>
             <a href="#" onclick="App.logout()" class="logout-link">🚪 Cerrar Sesión</a>
           </div>
         </div>
