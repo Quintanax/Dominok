@@ -16,8 +16,6 @@ const firebaseConfig = {
   private_key: process.env.FIREBASE_PRIVATE_KEY
 };
 
-let debugInfo = `Project: ${firebaseConfig.project_id || 'FALTANTE'}\nEmail: ${firebaseConfig.client_email ? 'OK' : 'FALTANTE'}\nKey: ${firebaseConfig.private_key ? 'OK (' + firebaseConfig.private_key.length + ' chars)' : 'FALTANTE'}`;
-
 // Limpieza ultra-profunda de la llave para Railway
 if (firebaseConfig.private_key) {
     firebaseConfig.private_key = firebaseConfig.private_key.trim().replace(/^["']|["']$/g, '');
@@ -41,7 +39,7 @@ try {
     })
   });
 } catch (e) {
-  debugInfo += `\nError Init: ${e.message}`;
+  console.error('❌ Error Init Firebase:', e.message);
 }
 const db = admin.firestore();
 
@@ -151,7 +149,7 @@ bot.on('photo', async (ctx) => {
 
   } catch (error) {
     console.error('Error detallado:', error);
-    ctx.reply(`❌ Error procesando imagen:\n\n${error.message}\n\n--- DIAGNÓSTICO ---\n${debugInfo}`);
+    ctx.reply(`❌ Hubo un error procesando la imagen con Groq:\n${error.message}`);
   }
 });
 
