@@ -278,6 +278,47 @@ const DB = {
     return { played, p1Wins, p2Wins };
   },
 
+  getBestPairs(groupId) {
+    const matches = this.getMatches(groupId);
+    const pairsMap = {}; // key: "id1|id2" (sorted)
+    
+    matches.forEach(m => {
+      // Process Team 1
+      if (m.team1.player1 && m.team1.player2) {
+        const ids = [m.team1.player1, m.team1.player2].sort();
+        const key = ids.join('|');
+        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0 };
+        pairsMap[key].played++;
+        if (m.winner === 'team1') pairsMap[key].wins++;
+        else pairsMap[key].losses++;
+      }
+      // Process Team 2
+      if (m.team2.player1 && m.team2.player2) {
+        const ids = [m.team2.player1, m.team2.player2].sort();
+        const key = ids.join('|');
+        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0 };
+        pairsMap[key].played++;
+        if (m.winner === 'team2') pairsMap[key].wins++;
+        else pairsMap[key].losses++;
+      }
+    });
+
+    const result = [];
+    for (const [key, stats] of Object.entries(pairsMap)) {
+      const [id1, id2] = key.split('|');
+      const p1 = this.getPlayerById(id1);
+      const p2 = this.getPlayerById(id2);
+      if (p1 && p2) {
+        const eff = stats.played > 0 ? ((stats.wins / stats.played) * 100).toFixed(1) : 0;
+        stats.eff = parseFloat(eff);
+        result.push({ p1, p2, stats });
+      }
+    }
+    
+    // Sort by eff desc, then wins desc
+    return result.sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
+  },
+
   getMatchesForPlayer(playerId, groupId) {
     return this.getMatches(groupId).filter(m =>
       m.team1.player1 === playerId || m.team1.player2 === playerId ||

@@ -144,7 +144,7 @@ const RankingsPage = {
 
   _renderPairsRanking() {
     const groupId = Auth.getGroupId();
-    const pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= 2);
+    const pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= 1);
 
     if (!pairs.length) {
       return `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No hay datos de parejas aún</div></div>`;
