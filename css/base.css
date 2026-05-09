@@ -1,0 +1,104 @@
+/* =========================================
+   BASE STYLES
+   ========================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background var(--transition-slow), color var(--transition-slow);
+}
+
+a { color: var(--accent-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font-family: var(--font-main); border: none; }
+input, select, textarea { font-family: var(--font-main); }
+:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+/* Helper Classes */
+.hidden { display: none !important; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 8px; }
+.gap-2 { gap: 16px; }
+.gap-3 { gap: 24px; }
+.w-full { width: 100%; }
+.text-center { text-align: center; }
+.text-muted { color: var(--text-secondary); }
+.text-sm { font-size: 0.85rem; }
+.text-xs { font-size: 0.75rem; }
+.semibold { font-weight: 600; }
+.bold { font-weight: 700; }
+.mono { font-family: var(--font-mono); }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Color Utilities */
+.text-success { color: var(--accent-success); }
+.text-danger { color: var(--accent-danger); }
+.text-warning { color: var(--accent-warning); }
+.text-accent { color: var(--accent-primary); }
+.text-blue { color: var(--accent-secondary); }
+
+/* Badge */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+}
+.badge-success { background: linear-gradient(90deg, #059669, #10B981) !important; color: #fff !important; box-shadow: 0 0 8px rgba(16,185,129,0.4); border:none; }
+.badge-danger { background: rgba(255,77,109,0.15); color: var(--accent-danger); }
+.badge-warning { background: linear-gradient(90deg, #D97706, #F59E0B) !important; color: #fff !important; box-shadow: 0 0 8px rgba(245,158,11,0.4); border:none; }
+.badge-info { background: rgba(108,99,255,0.15); color: var(--accent-primary); }
+.badge-blue { background: rgba(0,212,255,0.15); color: var(--accent-secondary); }
+.badge-muted { background: var(--bg-elevated); color: var(--text-secondary); }
+
+/* Progress Bar */
+.progress-bar {
+  height: 6px; background: var(--border-color); border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 4px; transition: width 0.5s ease;
+  background: var(--gradient-primary);
+}
+.progress-fill.green { background: var(--gradient-green); }
+.progress-fill.orange { background: var(--gradient-orange); }
+.progress-fill.red { background: var(--gradient-red); }
+
+/* Divider */
+.divider { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; }
+
+/* Avatar */
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  background: var(--gradient-primary); color: #fff;
+}
+.avatar-lg { width: 52px; height: 52px; font-size: 1.2rem; }
+.avatar-xl { width: 72px; height: 72px; font-size: 1.8rem; }
+
+/* Section */
+.section-title {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 16px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px; text-align: center; gap: 12px;
+}
+.empty-icon { font-size: 3rem; opacity: 0.4; }
+.empty-text { color: var(--text-secondary); font-size: 0.9rem; }

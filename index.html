@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DominoStats Pro — Sistema de Gestión Competitiva</title>
+  <meta name="description" content="Plataforma SaaS profesional para gestión de partidas, jugadores y estadísticas avanzadas de dominó y juegos en equipo." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/tables.css" />
+  <link rel="stylesheet" href="css/modals.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/ocr.css" />
+  
+  <!-- Firebase SDK -->
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Auth Screen -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <div class="auth-bg">
+      <div class="auth-particles" id="auth-particles"></div>
+    </div>
+    <div class="auth-container">
+      <div class="auth-brand">
+        <div class="brand-icon">🁣</div>
+        <h1 class="brand-name">DominoStats <span class="brand-pro">Pro</span></h1>
+        <p class="brand-tagline">Plataforma SaaS de Gestión Competitiva</p>
+      </div>
+      <div class="auth-card" id="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="App.switchAuthTab('login')">Iniciar Sesión</button>
+          <button class="auth-tab" id="tab-register" onclick="App.switchAuthTab('register')">Registrarse</button>
+        </div>
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form" onsubmit="_safeLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email o Usuario</label>
+            <input type="text" id="login-email" class="form-input" placeholder="tu@email.com o usuario" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <div class="input-with-icon">
+              <input type="password" id="login-password" class="form-input" placeholder="••••••••" required />
+              <button type="button" class="input-icon-btn" onclick="if(typeof App!=='undefined')App.togglePassword('login-password')">👁</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Entrar</button>
+          <p class="auth-demo-hint">
+            <button type="button" class="btn-link" onclick="document.getElementById('login-email').value='admin@demo.com';document.getElementById('login-password').value='admin123';" style="color:var(--accent-primary); font-weight:700;">
+              ✨ Auto-completar Demo
+            </button>
+            <br>
+            <span style="opacity:0.7">Admin: admin@demo.com / admin123</span>
+            <br>
+            <a href="#" onclick="if(typeof DB!=='undefined'){DB.resetDemo();}localStorage.removeItem('dominostats_db');location.reload();" style="font-size: 0.7rem; opacity: 0.6; color: inherit; text-decoration: underline;">Restablecer si el demo no funciona</a>
+          </p>
+        </form>
+        <!-- Register Form -->
+        <form id="register-form" class="auth-form hidden" onsubmit="App.handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label">Nombre completo</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="Tu nombre" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email o Usuario</label>
+            <input type="text" id="reg-email" class="form-input" placeholder="tu@email.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nombre del grupo</label>
+            <input type="text" id="reg-group" class="form-input" placeholder="Club Dominó XYZ" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <input type="password" id="reg-password" class="form-input" placeholder="Mínimo 6 caracteres" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Crear Cuenta</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-mini">
+          <span class="brand-icon-mini">🁣</span>
+          <span class="brand-name-mini">DominoStats</span>
+        </div>
+        <button class="sidebar-toggle-btn" id="sidebar-toggle" onclick="App.toggleSidebar()">☰</button>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <!-- Rendered dynamically by App._buildSidebar() -->
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-mini" onclick="App.navigate('profile')">
+          <div class="user-avatar-mini" id="user-avatar-mini">A</div>
+          <div class="user-info-mini">
+            <span class="user-name-mini" id="user-name-mini">Admin</span>
+            <span class="user-role-mini" id="user-role-mini">Admin Global</span>
+          </div>
+        </div>
+        <button class="theme-toggle" onclick="App.toggleTheme()" title="Cambiar tema">🌙</button>
+      </div>
+    </aside>
+
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-btn" onclick="App.toggleSidebar()">☰</button>
+          <div class="page-breadcrumb">
+            <span id="page-title">Dashboard</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search" class="search-input" placeholder="Buscar jugadores, partidas..." oninput="App.globalSearch(this.value)" />
+          </div>
+          <div class="notification-btn" onclick="App.showNotifications()">
+            <span>🔔</span>
+            <span class="notif-badge" id="notif-badge">3</span>
+          </div>
+          <div class="user-menu" onclick="App.toggleUserMenu()">
+            <div class="user-avatar" id="topbar-avatar">A</div>
+            <span class="user-name" id="topbar-name">Admin</span>
+            <span>▾</span>
+          </div>
+          <div class="user-dropdown hidden" id="user-dropdown">
+            <a href="#" onclick="App.navigate('profile')">👤 Mi Perfil</a>
+            <a href="#" onclick="App.navigate('admin')">⚙️ Configuración</a>
+            <hr />
+            <a href="#" onclick="App.logout()" class="logout-link">🚪 Cerrar Sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <!-- Pages -->
+      <div class="page-content" id="page-content">
+        <!-- Pages are rendered dynamically by JS -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Global Modals -->
+  <div id="modal-overlay" class="modal-overlay hidden" onclick="App.closeModal(event)">
+    <div id="modal-container" class="modal-container"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Search Results Dropdown -->
+  <div id="search-results" class="search-results hidden"></div>
+
+  <!-- Notifications Panel -->
+  <div id="notif-panel" class="notif-panel hidden">
+    <div class="notif-header">
+      <span>Notificaciones</span>
+      <button onclick="App.markAllRead()">Marcar todo leído</button>
+    </div>
+    <div id="notif-list" class="notif-list"></div>
+  </div>
+
+  <!-- Standalone login logic — works even if app.js fails to load -->
+  <script>
+    function _safeLogin(e) {
+      e.preventDefault();
+      var email = document.getElementById('login-email').value.trim();
+      var password = document.getElementById('login-password').value;
+      // If App loaded fine, use it
+      if (typeof App !== 'undefined' && App.handleLogin) {
+        App.handleLogin(e);
+        return;
+      }
+      // Fallback: direct DB + Auth login
+      try {
+        if (typeof DB === 'undefined') { alert('Error: La base de datos no cargó. Intenta recargar la página con Ctrl+Shift+R'); return; }
+        var result = Auth.login(email, password);
+        if (result.error) {
+          var msgEl = document.getElementById('_login-err');
+          if (!msgEl) { msgEl = document.createElement('p'); msgEl.id = '_login-err'; msgEl.style.cssText = 'color:#ff4d6d;font-size:0.85rem;margin:8px 0 0;text-align:center'; document.getElementById('login-form').appendChild(msgEl); }
+          msgEl.textContent = result.error;
+        } else {
+          location.reload();
+        }
+      } catch(err) {
+        console.error('Login error:', err);
+        alert('Error critico: ' + err.message + '\n\nRevisa la consola (F12) para más detalles.');
+      }
+    }
+  </script>
+
+  <!-- Scripts -->
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/matches.js"></script>
+  <script src="js/gemini_ocr.js"></script>
+  <script src="js/pages/tournaments.js"></script>
+  <script src="js/pages/players.js"></script>
+  <script src="js/pages/rankings.js"></script>
+  <script src="js/pages/history.js"></script>
+  <script src="js/pages/stats.js"></script>
+  <script src="js/pages/predictor.js"></script>
+  <script src="js/pages/import.js"></script>
+  <script src="js/pages/reports.js"></script>
+  <script src="js/pages/admin.js"></script>
+  <script src="js/pages/admin_dashboard.js"></script>
+  <script src="js/pages/global_tournament.js"></script>
+  <script src="js/firebase_manager.js" type="module"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "dominostats-telegram-bot",
+  "version": "1.0.0",
+  "description": "Bridge between Telegram photos and DominoStats Pro",
+  "main": "bot.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.6.2",
+    "dotenv": "^17.4.2",
+    "firebase-admin": "^11.11.1",
+    "telegraf": "^4.15.0"
+  },
+  "scripts": {
+    "start": "node bot.js"
+  }
+}

@@ -1,0 +1,85 @@
+/* =========================================
+   CSS VARIABLES — Design System Tokens
+   ========================================= */
+:root {
+  /* Color Palette — Dark Mode Default */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #0f1628;
+  --bg-card: #131c35;
+  --bg-card-hover: #1a2545;
+  --bg-elevated: #1e2d4a;
+  --bg-input: #0d1525;
+  --bg-sidebar: #090d1f;
+
+  --border-color: #1e2d4a;
+  --border-subtle: #151f38;
+
+  /* Brand Colors */
+  --accent-primary: #6c63ff;
+  --accent-secondary: #00d4ff;
+  --accent-success: #00e5a0;
+  --accent-warning: #ffb800;
+  --accent-danger: #ff4d6d;
+  --accent-purple: #b44fff;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6c63ff 0%, #b44fff 100%);
+  --gradient-blue: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+  --gradient-green: linear-gradient(135deg, #00e5a0 0%, #00b894 100%);
+  --gradient-orange: linear-gradient(135deg, #ffb800 0%, #ff6b35 100%);
+  --gradient-red: linear-gradient(135deg, #ff4d6d 0%, #c0392b 100%);
+  --gradient-card: linear-gradient(145deg, #131c35, #1a2545);
+
+  /* Text */
+  --text-primary: #e8eaf6;
+  --text-secondary: #8892b0;
+  --text-muted: #4a5568;
+  --text-accent: #6c63ff;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 20px rgba(108,99,255,0.3);
+  --shadow-glow-green: 0 0 20px rgba(0,229,160,0.2);
+
+  /* Sizes */
+  --sidebar-width: 180px;
+  --sidebar-collapsed: 64px;
+  --topbar-height: 48px;
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+
+  /* Typography */
+  --font-main: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Light Mode Override */
+[data-theme="light"] {
+  --bg-primary: #f0f2f8;
+  --bg-secondary: #e8ecf5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f7ff;
+  --bg-elevated: #ffffff;
+  --bg-input: #f5f7ff;
+  --bg-sidebar: #1a1f3e;
+
+  --border-color: #dde2f0;
+  --border-subtle: #edf0f8;
+
+  --text-primary: #1a1f3e;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.15);
+}

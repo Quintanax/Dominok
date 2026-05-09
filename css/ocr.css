@@ -1,0 +1,216 @@
+/* =========================================
+   OCR — GEMINI UPLOAD MODAL STYLES
+   ========================================= */
+
+/* Drop Zone */
+.ocr-drop-zone {
+  border: 2px dashed rgba(99, 102, 241, 0.4);
+  border-radius: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(99, 102, 241, 0.04);
+  transition: all 200ms ease;
+}
+.ocr-drop-zone:hover,
+.ocr-drop-zone.drag-over {
+  border-color: #6366F1;
+  background: rgba(99, 102, 241, 0.1);
+  transform: scale(1.01);
+}
+.ocr-drop-icon { font-size: 2.5rem; }
+.ocr-drop-text { font-size: 0.9rem; color: var(--text-secondary); }
+.ocr-drop-text strong { color: var(--text-primary); }
+
+/* Alertas inline */
+.ocr-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.ocr-alert-warn  { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #FDE68A; }
+.ocr-alert-info  { background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3);  color: #C7D2FE; }
+.ocr-alert-error { background: rgba(239, 68, 68, 0.12);  border: 1px solid rgba(239, 68, 68, 0.3);   color: #FCA5A5; }
+
+/* Spinner pequeño */
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #6366F1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* =============================================
+   REVIEW LIST — Lista de partidas detectadas
+   ============================================= */
+
+.ocr-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Sin max-height, el modal scroll hace su trabajo */
+}
+
+/* Tarjeta de partida */
+.ocr-match-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(15, 18, 35, 0.7);
+  transition: opacity 300ms ease;
+}
+.ocr-card-ok   { border-color: rgba(52, 211, 153, 0.2); }
+.ocr-card-warn { border-color: rgba(252, 211, 77, 0.2); }
+
+/* Header */
+.ocr-match-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ocr-match-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  color: #A5B4FC;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ocr-match-num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6B7280;
+}
+
+/* Body */
+.ocr-match-body {
+  display: grid;
+  grid-template-columns: 1fr 44px 1fr;
+  gap: 0;
+  align-items: stretch;
+  padding: 0;
+}
+
+/* Team panels */
+.ocr-team {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+.ocr-team-1 { border-right: 1px solid rgba(255,255,255,0.06); }
+.ocr-team-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* Player row: detected name + select */
+.ocr-player-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.ocr-detected-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+/* Selects */
+.ocr-select {
+  font-size: 0.82rem !important;
+  padding: 6px 10px !important;
+  height: auto !important;
+  background: rgba(0,0,0,0.25) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #F3F4F6 !important;
+}
+.ocr-select.select-ok  { border-color: rgba(52, 211, 153, 0.35) !important; }
+.ocr-select.select-warn { border-color: rgba(252, 211, 77, 0.35) !important; }
+.ocr-select:focus { border-color: #6366F1 !important; outline: none; }
+
+/* Score badge */
+.ocr-score-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  background: rgba(99,102,241,0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(99,102,241,0.12);
+}
+.ocr-score-input {
+  width: 72px !important;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+}
+
+/* VS Column */
+.ocr-vs-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ocr-vs-bubble {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  color: #4B5563;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}
+
+/* Compact size overrides */
+.form-input-sm, .form-select-sm {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  height: auto;
+}
+.btn-xs {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+/* Modal XL */
+.modal-xl { max-width: 860px; }
