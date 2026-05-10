@@ -149,7 +149,9 @@ const DB = {
       
       const rawAliases = p.aliases || p.alias || '';
       // Support comma-separated aliases
-      const aliasesArray = typeof rawAliases === 'string' ? rawAliases.split(',').map(a => a.trim()).filter(Boolean) : Array.isArray(rawAliases) ? rawAliases : [];
+      // Support comma-separated aliases and numeric values
+      const safeRaw = (rawAliases !== null && rawAliases !== undefined) ? String(rawAliases) : '';
+      const aliasesArray = safeRaw.split(',').map(a => a.trim()).filter(Boolean);
       
       const player = this.addPlayer({ 
         name: name, 

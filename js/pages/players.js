@@ -44,7 +44,8 @@ const PlayersPage = {
   _getAliasArray(player) {
     if (!player) return [];
     if (Array.isArray(player.aliases)) return player.aliases.filter(Boolean);
-    const raw = player.aliases || player.alias || '';
+    const raw = (player.aliases !== undefined && player.aliases !== null) ? String(player.aliases) : 
+                (player.alias !== undefined && player.alias !== null) ? String(player.alias) : '';
     if (!raw) return [];
     return raw.split(',').map(a => a.trim()).filter(Boolean);
   },
