@@ -6,128 +6,188 @@
 
 window.CloudDB = {
   _db: null,
+  _auth: null,
   _unsubscribe: null,
 
   // =========================================
-  // CLOUD AUTHENTICATION (Cross-browser Login)
-  // Users and groups stored in Firestore so
-  // any browser can log in.
+  // FIREBASE AUTHENTICATION (Official SDK)
+  // Uses firebase.auth() — works on any browser
   // =========================================
 
+  _getAuth() {
+    if (this._auth) return this._auth;
+    const db = this._getDb(); // ensures Firebase is initialized
+    if (!db) return null;
+    try {
+      this._auth = firebase.auth();
+      return this._auth;
+    } catch(e) {
+      console.error('❌ CloudDB: Error getting Firebase Auth:', e);
+      return null;
+    }
+  },
+
   async registerUser(name, email, password, groupName) {
-    const db = this._getDb();
-    if (!db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
-
-    const emailNorm = email.toLowerCase().trim();
-
-    // Check if email already exists in Firestore
-    const existing = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
-    if (!existing.empty) return { error: 'Este email ya está registrado.' };
+    const auth = this._getAuth();
+    const db   = this._getDb();
+    if (!auth || !db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
     if (password.length < 6) return { error: 'La contraseña debe tener al menos 6 caracteres.' };
 
-    // Create group document
-    const groupRef = db.collection('groups').doc();
-    const groupId = groupRef.id;
-    const userRef = db.collection('users').doc();
-    const userId = userRef.id;
+    try {
+      // 1. Create Firebase Auth account
+      const cred = await auth.createUserWithEmailAndPassword(email.trim(), password);
+      const uid  = cred.user.uid;
 
-    const group = {
-      id: groupId,
-      name: groupName,
-      adminId: userId,
-      createdAt: new Date().toISOString(),
-      active: true
-    };
+      // 2. Create group document in Firestore
+      const groupRef = db.collection('groups').doc();
+      const groupId  = groupRef.id;
 
-    const user = {
-      id: userId,
-      name,
-      email: emailNorm,
-      password,
-      role: 'group_admin',
-      groupId,
-      createdAt: new Date().toISOString(),
-      active: true,
-      avatar: null
-    };
+      const group = {
+        id: groupId,
+        name: groupName,
+        adminId: uid,
+        createdAt: new Date().toISOString(),
+        active: true
+      };
 
-    const batch = db.batch();
-    batch.set(groupRef, group);
-    batch.set(userRef, user);
-    await batch.commit();
+      // 3. Create user profile document in Firestore
+      const user = {
+        id: uid,
+        name,
+        email: email.toLowerCase().trim(),
+        role: 'group_admin',
+        groupId,
+        createdAt: new Date().toISOString(),
+        active: true,
+        avatar: null
+      };
 
-    // Seed local DB with the new user + group so the app can continue normally
-    this._injectUserLocally(user, group);
+      const batch = db.batch();
+      batch.set(groupRef, group);
+      batch.set(db.collection('users').doc(uid), user);
+      await batch.commit();
 
-    return { success: true, user };
+      // 4. Inject into local DB for the current session
+      this._injectUserLocally(user, group);
+
+      return { success: true, user };
+    } catch(e) {
+      console.error('❌ CloudDB.registerUser:', e);
+      if (e.code === 'auth/email-already-in-use') return { error: 'Este email ya está registrado.' };
+      if (e.code === 'auth/invalid-email')        return { error: 'El email no es válido.' };
+      if (e.code === 'auth/weak-password')        return { error: 'La contraseña es muy débil (mín. 6 caracteres).' };
+      return { error: 'Error al crear la cuenta: ' + e.message };
+    }
   },
 
   async loginUser(email, password) {
-    const db = this._getDb();
-    if (!db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
+    const auth = this._getAuth();
+    const db   = this._getDb();
+    if (!auth || !db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
 
-    const emailNorm = email.toLowerCase().trim();
+    try {
+      // 1. Sign in with Firebase Auth
+      const cred = await auth.signInWithEmailAndPassword(email.trim(), password);
+      const uid  = cred.user.uid;
 
-    const snap = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
-    if (snap.empty) return { error: 'Email no encontrado.' };
+      // 2. Load user profile from Firestore
+      let userDoc = await db.collection('users').doc(uid).get();
 
-    const user = snap.docs[0].data();
-    if (user.password !== password) return { error: 'Contraseña incorrecta.' };
-    if (!user.active) return { error: 'Cuenta inactiva. Contacta al administrador.' };
+      // If profile doesn't exist yet (legacy account), create it
+      if (!userDoc.exists) {
+        const groupRef = db.collection('groups').doc();
+        const groupId  = groupRef.id;
+        const user = {
+          id: uid,
+          name: email.split('@')[0],
+          email: email.toLowerCase().trim(),
+          role: 'group_admin',
+          groupId,
+          createdAt: new Date().toISOString(),
+          active: true,
+          avatar: null
+        };
+        const group = {
+          id: groupId,
+          name: 'Mi Grupo',
+          adminId: uid,
+          createdAt: new Date().toISOString(),
+          active: true
+        };
+        const batch = db.batch();
+        batch.set(db.collection('users').doc(uid), user);
+        batch.set(groupRef, group);
+        await batch.commit();
+        this._injectUserLocally(user, group);
+        return { success: true, user };
+      }
 
-    // Load the user's group from Firestore
-    const groupSnap = await db.collection('groups').doc(user.groupId).get();
-    const group = groupSnap.exists ? groupSnap.data() : null;
+      const user = userDoc.data();
+      if (!user.active) return { error: 'Cuenta inactiva. Contacta al administrador.' };
 
-    // Inject into local DB so the rest of the app works normally
-    this._injectUserLocally(user, group);
+      // 3. Load group
+      const groupSnap = await db.collection('groups').doc(user.groupId).get();
+      const group = groupSnap.exists ? groupSnap.data() : null;
 
-    return { success: true, user };
+      // 4. Inject into local DB for this session
+      this._injectUserLocally(user, group);
+
+      return { success: true, user };
+    } catch(e) {
+      console.error('❌ CloudDB.loginUser:', e);
+      if (e.code === 'auth/user-not-found')   return { error: 'Email no encontrado. ¿Ya tienes cuenta?' };
+      if (e.code === 'auth/wrong-password')   return { error: 'Contraseña incorrecta.' };
+      if (e.code === 'auth/invalid-email')    return { error: 'El email no es válido.' };
+      if (e.code === 'auth/too-many-requests')return { error: 'Demasiados intentos fallidos. Intenta más tarde.' };
+      return { error: 'Error al iniciar sesión: ' + e.message };
+    }
   },
 
   _injectUserLocally(user, group) {
-    // Ensure local DB has this user
-    if (!DB._store.users) DB._store.users = [];
+    if (!DB._store.users)  DB._store.users  = [];
     if (!DB._store.groups) DB._store.groups = [];
 
     const uIdx = DB._store.users.findIndex(u => u.id === user.id);
     if (uIdx === -1) DB._store.users.push(user);
-    else DB._store.users[uIdx] = user;
+    else             DB._store.users[uIdx] = user;
 
     if (group) {
       const gIdx = DB._store.groups.findIndex(g => g.id === group.id);
       if (gIdx === -1) DB._store.groups.push(group);
-      else DB._store.groups[gIdx] = group;
+      else             DB._store.groups[gIdx] = group;
     }
 
-    // Persist to localStorage so DB.getUserById() works during the session
     try { localStorage.setItem('dominostats_db', JSON.stringify(DB._store)); } catch(e) {}
   },
 
-  // Migrate an existing local-only user to Firestore (one-time, on first cloud login)
+  // Migrate a legacy localStorage user: register them in Firebase Auth + Firestore
   async migrateUserToCloud(user) {
-    const db = this._getDb();
-    if (!db || !user || !user.email) return;
+    const auth = this._getAuth();
+    const db   = this._getDb();
+    if (!auth || !db || !user || !user.email) return;
+
     try {
-      const emailNorm = user.email.toLowerCase().trim();
-      // Only migrate if not already in Firestore
-      const snap = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
-      if (!snap.empty) return; // Already exists
-
-      const userToSave = { ...user, email: emailNorm };
-      await db.collection('users').doc(user.id).set(userToSave);
-
-      // Also migrate the group
-      const group = (DB._store.groups || []).find(g => g.id === user.groupId);
-      if (group) {
-        await db.collection('groups').doc(group.id).set(group);
+      // Check if already in Firebase Auth by trying to fetch sign-in methods
+      const methods = await auth.fetchSignInMethodsForEmail(user.email);
+      if (methods && methods.length > 0) {
+        // Already registered — just ensure Firestore profile exists
+        const doc = await db.collection('users').doc(user.id).get();
+        if (!doc.exists) {
+          await db.collection('users').doc(user.id).set({ ...user, email: user.email.toLowerCase() });
+          const group = (DB._store.groups || []).find(g => g.id === user.groupId);
+          if (group) await db.collection('groups').doc(group.id).set(group);
+        }
+        console.log('✅ CloudDB: Perfil sincronizado en Firestore:', user.email);
+        return;
       }
-      console.log('✅ CloudDB: Usuario migrado a la nube:', emailNorm);
+
+      // Not in Firebase Auth — need password to migrate
+      // We can't migrate without password, skip silently (user must re-register)
+      console.log('ℹ️ CloudDB: Usuario local no migrado (sin contraseña conocida):', user.email);
     } catch(e) {
       console.error('❌ CloudDB.migrateUserToCloud:', e);
     }
   },
-
 
 
   _getDb() {

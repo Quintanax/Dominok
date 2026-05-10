@@ -19,6 +19,7 @@
   
   <!-- Firebase Compat SDK (v8 API — works as regular script, no modules needed) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
@@ -174,29 +175,12 @@
     <div id="notif-list" class="notif-list"></div>
   </div>
 
-  <!-- Standalone login logic — always delegates to App.handleLogin (async + Firebase) -->
+  <!-- Login delegates to App.handleLogin which uses Firebase Auth -->
   <script>
     async function _safeLogin(e) {
       e.preventDefault();
-      // If App loaded fine, use it (handles Firebase auth)
       if (typeof App !== 'undefined' && App.handleLogin) {
         await App.handleLogin(e);
-        return;
-      }
-      // Hard fallback: direct local DB login (offline demo only)
-      try {
-        var email = document.getElementById('login-email').value.trim();
-        var password = document.getElementById('login-password').value;
-        if (typeof DB === 'undefined') { alert('Error: La base de datos no cargó. Recarga con Ctrl+Shift+R'); return; }
-        var result = Auth.login(email, password);
-        if (result.error) {
-          var msgEl = document.getElementById('_login-err');
-          if (!msgEl) { msgEl = document.createElement('p'); msgEl.id = '_login-err'; msgEl.style.cssText = 'color:#ff4d6d;font-size:0.85rem;margin:8px 0 0;text-align:center'; document.getElementById('login-form').appendChild(msgEl); }
-          msgEl.textContent = result.error;
-        } else { location.reload(); }
-      } catch(err) {
-        console.error('Login error:', err);
-        alert('Error crítico: ' + err.message + '\n\nRevisa la consola (F12).');
       }
     }
   </script>
