@@ -183,7 +183,13 @@
 .brand-icon { font-size: 3.5rem; filter: drop-shadow(0 0 20px rgba(108,99,255,0.5)); animation: float 3s ease-in-out infinite; }
 .brand-name { font-size: 2.2rem; font-weight: 900; margin: 8px 0 4px; }
 .brand-pro {
-  background: var(--gradient-primary); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+  background: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 15px rgba(108,99,255,0.4);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
 }
 .brand-tagline { color: var(--text-secondary); font-size: 0.9rem; }
 .auth-card {
