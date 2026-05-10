@@ -134,6 +134,8 @@ const App = {
       // Start real-time Firebase listener now that we have a logged-in user
       if (typeof window.CloudDB !== 'undefined' && Auth.currentUser) {
         window.CloudDB.listenToCloud();
+        // Auto-migrate legacy localStorage users to Firestore if not there yet
+        window.CloudDB.migrateUserToCloud(Auth.currentUser);
       }
     } catch (e) {
       console.error('Error rendering app:', e);
