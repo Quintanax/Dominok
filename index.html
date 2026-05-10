@@ -174,34 +174,33 @@
     <div id="notif-list" class="notif-list"></div>
   </div>
 
-  <!-- Standalone login logic — works even if app.js fails to load -->
+  <!-- Standalone login logic — always delegates to App.handleLogin (async + Firebase) -->
   <script>
-    function _safeLogin(e) {
+    async function _safeLogin(e) {
       e.preventDefault();
-      var email = document.getElementById('login-email').value.trim();
-      var password = document.getElementById('login-password').value;
-      // If App loaded fine, use it
+      // If App loaded fine, use it (handles Firebase auth)
       if (typeof App !== 'undefined' && App.handleLogin) {
-        App.handleLogin(e);
+        await App.handleLogin(e);
         return;
       }
-      // Fallback: direct DB + Auth login
+      // Hard fallback: direct local DB login (offline demo only)
       try {
-        if (typeof DB === 'undefined') { alert('Error: La base de datos no cargó. Intenta recargar la página con Ctrl+Shift+R'); return; }
+        var email = document.getElementById('login-email').value.trim();
+        var password = document.getElementById('login-password').value;
+        if (typeof DB === 'undefined') { alert('Error: La base de datos no cargó. Recarga con Ctrl+Shift+R'); return; }
         var result = Auth.login(email, password);
         if (result.error) {
           var msgEl = document.getElementById('_login-err');
           if (!msgEl) { msgEl = document.createElement('p'); msgEl.id = '_login-err'; msgEl.style.cssText = 'color:#ff4d6d;font-size:0.85rem;margin:8px 0 0;text-align:center'; document.getElementById('login-form').appendChild(msgEl); }
           msgEl.textContent = result.error;
-        } else {
-          location.reload();
-        }
+        } else { location.reload(); }
       } catch(err) {
         console.error('Login error:', err);
-        alert('Error critico: ' + err.message + '\n\nRevisa la consola (F12) para más detalles.');
+        alert('Error crítico: ' + err.message + '\n\nRevisa la consola (F12).');
       }
     }
   </script>
+
 
   <!-- Scripts -->
   <!-- SheetJS for Excel parsing -->

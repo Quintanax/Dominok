@@ -252,26 +252,56 @@ const App = {
     }
   },
 
-  handleLogin(e) {
+  async handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const btn = e.target.querySelector('[type="submit"]');
     btn.disabled = true;
-    btn.textContent = 'Iniciando...';
+    btn.textContent = 'Verificando...';
 
     try {
-      const result = Auth.login(email, password);
-      if (result.error) {
-        Toast.error(result.error);
-        btn.disabled = false;
-        btn.textContent = 'Entrar';
-      } else {
+      // Try demo account locally first (always available)
+      const isDemoEmail = email.toLowerCase() === 'admin@demo.com';
+      if (isDemoEmail) {
+        const result = Auth.login(email, password);
+        if (result.error) {
+          Toast.error(result.error);
+          btn.disabled = false; btn.textContent = 'Entrar';
+        } else {
+          setTimeout(() => this._showApp(), 300);
+        }
+        return;
+      }
+
+      // Cloud login via Firestore
+      if (typeof window.CloudDB !== 'undefined') {
+        const result = await window.CloudDB.loginUser(email, password);
+        if (result.error) {
+          // Fallback: try local DB (e.g. was created offline)
+          const localResult = Auth.login(email, password);
+          if (localResult.error) {
+            Toast.error(result.error);
+            btn.disabled = false; btn.textContent = 'Entrar';
+            return;
+          }
+          setTimeout(() => this._showApp(), 300);
+          return;
+        }
+        Auth.currentUser = result.user;
+        const session = { userId: result.user.id, loginAt: new Date().toISOString() };
+        sessionStorage.setItem(Auth.SESSION_KEY, JSON.stringify(session));
+        DB.addLog({ action: 'login', desc: `Inicio de sesión: ${result.user.name}` });
         setTimeout(() => this._showApp(), 300);
+      } else {
+        // No Firebase available: try local
+        const result = Auth.login(email, password);
+        if (result.error) { Toast.error(result.error); btn.disabled = false; btn.textContent = 'Entrar'; }
+        else { setTimeout(() => this._showApp(), 300); }
       }
     } catch (err) {
       console.error(err);
-      Toast.error('Error del sistema al iniciar sesión');
+      Toast.error('Error al conectar con la nube. Intenta de nuevo.');
       btn.disabled = false;
       btn.textContent = 'Entrar';
     }
@@ -286,29 +316,41 @@ const App = {
     } catch (e) { console.error(e); }
   },
 
-  handleRegister(e) {
+  async handleRegister(e) {
     e.preventDefault();
     const name = document.getElementById('reg-name').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const group = document.getElementById('reg-group').value.trim();
     const password = document.getElementById('reg-password').value;
     const btn = e.target.querySelector('[type="submit"]');
-    
+
+    btn.disabled = true;
+    btn.textContent = 'Creando cuenta...';
+
     try {
-      btn.disabled = true;
-      btn.textContent = 'Procesando...';
-      const result = Auth.register(name, email, password, group);
-      if (result.error) {
-        Toast.error(result.error);
-        btn.disabled = false;
-        btn.textContent = 'Crear Cuenta';
-      } else {
+      // Cloud registration via Firestore
+      if (typeof window.CloudDB !== 'undefined') {
+        const result = await window.CloudDB.registerUser(name, email, password, group);
+        if (result.error) {
+          Toast.error(result.error);
+          btn.disabled = false; btn.textContent = 'Crear Cuenta';
+          return;
+        }
+        Auth.currentUser = result.user;
+        const session = { userId: result.user.id, loginAt: new Date().toISOString() };
+        sessionStorage.setItem(Auth.SESSION_KEY, JSON.stringify(session));
+        DB.addLog({ action: 'register', desc: `Nueva cuenta: ${name}` });
         Toast.success('¡Cuenta creada! Bienvenido 🎉');
         setTimeout(() => this._showApp(), 300);
+      } else {
+        // Fallback: local only
+        const result = Auth.register(name, email, password, group);
+        if (result.error) { Toast.error(result.error); btn.disabled = false; btn.textContent = 'Crear Cuenta'; }
+        else { Toast.success('¡Cuenta creada! Bienvenido 🎉'); setTimeout(() => this._showApp(), 300); }
       }
     } catch (err) {
       console.error(err);
-      Toast.error('Error al registrar usuario');
+      Toast.error('Error al crear la cuenta. Revisa tu conexión.');
       btn.disabled = false;
       btn.textContent = 'Crear Cuenta';
     }

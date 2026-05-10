@@ -8,6 +8,104 @@ window.CloudDB = {
   _db: null,
   _unsubscribe: null,
 
+  // =========================================
+  // CLOUD AUTHENTICATION (Cross-browser Login)
+  // Users and groups stored in Firestore so
+  // any browser can log in.
+  // =========================================
+
+  async registerUser(name, email, password, groupName) {
+    const db = this._getDb();
+    if (!db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
+
+    const emailNorm = email.toLowerCase().trim();
+
+    // Check if email already exists in Firestore
+    const existing = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
+    if (!existing.empty) return { error: 'Este email ya está registrado.' };
+    if (password.length < 6) return { error: 'La contraseña debe tener al menos 6 caracteres.' };
+
+    // Create group document
+    const groupRef = db.collection('groups').doc();
+    const groupId = groupRef.id;
+    const userRef = db.collection('users').doc();
+    const userId = userRef.id;
+
+    const group = {
+      id: groupId,
+      name: groupName,
+      adminId: userId,
+      createdAt: new Date().toISOString(),
+      active: true
+    };
+
+    const user = {
+      id: userId,
+      name,
+      email: emailNorm,
+      password,
+      role: 'group_admin',
+      groupId,
+      createdAt: new Date().toISOString(),
+      active: true,
+      avatar: null
+    };
+
+    const batch = db.batch();
+    batch.set(groupRef, group);
+    batch.set(userRef, user);
+    await batch.commit();
+
+    // Seed local DB with the new user + group so the app can continue normally
+    this._injectUserLocally(user, group);
+
+    return { success: true, user };
+  },
+
+  async loginUser(email, password) {
+    const db = this._getDb();
+    if (!db) return { error: 'Sin conexión a la nube. Inténtalo de nuevo.' };
+
+    const emailNorm = email.toLowerCase().trim();
+
+    const snap = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
+    if (snap.empty) return { error: 'Email no encontrado.' };
+
+    const user = snap.docs[0].data();
+    if (user.password !== password) return { error: 'Contraseña incorrecta.' };
+    if (!user.active) return { error: 'Cuenta inactiva. Contacta al administrador.' };
+
+    // Load the user's group from Firestore
+    const groupSnap = await db.collection('groups').doc(user.groupId).get();
+    const group = groupSnap.exists ? groupSnap.data() : null;
+
+    // Inject into local DB so the rest of the app works normally
+    this._injectUserLocally(user, group);
+
+    return { success: true, user };
+  },
+
+  _injectUserLocally(user, group) {
+    // Ensure local DB has this user
+    if (!DB._store.users) DB._store.users = [];
+    if (!DB._store.groups) DB._store.groups = [];
+
+    const uIdx = DB._store.users.findIndex(u => u.id === user.id);
+    if (uIdx === -1) DB._store.users.push(user);
+    else DB._store.users[uIdx] = user;
+
+    if (group) {
+      const gIdx = DB._store.groups.findIndex(g => g.id === group.id);
+      if (gIdx === -1) DB._store.groups.push(group);
+      else DB._store.groups[gIdx] = group;
+    }
+
+    // Persist to localStorage so DB.getUserById() works during the session
+    try { localStorage.setItem('dominostats_db', JSON.stringify(DB._store)); } catch(e) {}
+  },
+
+
+
   _getDb() {
     if (this._db) return this._db;
     if (typeof firebase === 'undefined') {
