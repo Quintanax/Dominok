@@ -278,13 +278,16 @@ const App = {
       if (typeof window.CloudDB !== 'undefined') {
         const result = await window.CloudDB.loginUser(email, password);
         if (result.error) {
-          // Fallback: try local DB (e.g. was created offline)
+          // Fallback: try local DB (e.g. was created offline / pre-cloud)
           const localResult = Auth.login(email, password);
           if (localResult.error) {
             Toast.error(result.error);
             btn.disabled = false; btn.textContent = 'Entrar';
             return;
           }
+          // ✅ Local login worked — migrate this user to Firestore now
+          Toast.info('Migrando cuenta a la nube... un momento');
+          await window.CloudDB.migrateUserToCloud(localResult.user);
           setTimeout(() => this._showApp(), 300);
           return;
         }

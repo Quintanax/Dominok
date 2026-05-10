@@ -104,6 +104,30 @@ window.CloudDB = {
     try { localStorage.setItem('dominostats_db', JSON.stringify(DB._store)); } catch(e) {}
   },
 
+  // Migrate an existing local-only user to Firestore (one-time, on first cloud login)
+  async migrateUserToCloud(user) {
+    const db = this._getDb();
+    if (!db || !user || !user.email) return;
+    try {
+      const emailNorm = user.email.toLowerCase().trim();
+      // Only migrate if not already in Firestore
+      const snap = await db.collection('users').where('email', '==', emailNorm).limit(1).get();
+      if (!snap.empty) return; // Already exists
+
+      const userToSave = { ...user, email: emailNorm };
+      await db.collection('users').doc(user.id).set(userToSave);
+
+      // Also migrate the group
+      const group = (DB._store.groups || []).find(g => g.id === user.groupId);
+      if (group) {
+        await db.collection('groups').doc(group.id).set(group);
+      }
+      console.log('✅ CloudDB: Usuario migrado a la nube:', emailNorm);
+    } catch(e) {
+      console.error('❌ CloudDB.migrateUserToCloud:', e);
+    }
+  },
+
 
 
   _getDb() {
