@@ -28,7 +28,14 @@ try {
   // Fallback: intentar con variables de entorno (para Railway/producción sin el JSON)
   console.warn('⚠️  serviceAccountKey.json no encontrado, intentando con variables de entorno...');
   try {
-    let privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+    let privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
+      .trim()
+      .replace(/^["'`]|["'`]$/g, '')   // Elimina comillas envolventes que Railway puede añadir
+      .replace(/\\n/g, '\n');            // Convierte \n literales en saltos de línea reales
+
+    console.log('🔑 Longitud de la llave procesada:', privateKey.length);
+    console.log('🔑 Inicia con:', privateKey.substring(0, 30));
+
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId:   process.env.FIREBASE_PROJECT_ID,
