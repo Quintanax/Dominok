@@ -1,3 +1,4 @@
+// Conexión verificada - Vercel Deployment Sync Test
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
