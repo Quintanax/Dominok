@@ -1,4 +1,3 @@
-// Conexión verificada - Vercel Deployment Sync Test
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
@@ -8,12 +7,12 @@ const path = require('path');
 
 // ─── 1. CONFIGURACIÓN ──────────────────────────────────────────
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const GROQ_API_KEY   = process.env.GROQ_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group';
 
 // Validación de variables obligatorias al arrancar
 if (!TELEGRAM_TOKEN) { console.error('❌ FATAL: TELEGRAM_TOKEN no está definido en .env'); process.exit(1); }
-if (!GROQ_API_KEY)   { console.error('❌ FATAL: GROQ_API_KEY no está definido en .env'); process.exit(1); }
+if (!GROQ_API_KEY) { console.error('❌ FATAL: GROQ_API_KEY no está definido en .env'); process.exit(1); }
 
 // ─── 2. INICIALIZAR FIREBASE ───────────────────────────────────
 // Usa serviceAccountKey.json directamente — más fiable que parsear env vars
@@ -29,22 +28,31 @@ try {
   // Fallback: intentar con variables de entorno (para Railway/producción sin el JSON)
   console.warn('⚠️  serviceAccountKey.json no encontrado, intentando con variables de entorno...');
   try {
-    let privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
-      .trim()
-      .replace(/^["'`]|["'`]$/g, '')   // Elimina comillas envolventes que Railway puede añadir
-      .replace(/\\n/g, '\n');            // Convierte \n literales en saltos de línea reales
+    if (process.env.FIREBASE_BASE64) {
+      console.log('🔑 Detectada variable FIREBASE_BASE64, decodificando...');
+      const decoded = Buffer.from(process.env.FIREBASE_BASE64, 'base64').toString('utf8');
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(decoded))
+      });
+      console.log('✅ Firebase Admin inicializado desde FIREBASE_BASE64');
+    } else {
+      let privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
+        .trim()
+        .replace(/^["'`]|["'`]$/g, '')   // Elimina comillas envolventes que Railway puede añadir
+        .replace(/\\n/g, '\n');            // Convierte \n literales en saltos de línea reales
 
-    console.log('🔑 Longitud de la llave procesada:', privateKey.length);
-    console.log('🔑 Inicia con:', privateKey.substring(0, 30));
+      console.log('🔑 Longitud de la llave procesada:', privateKey.length);
+      console.log('🔑 Inicia con:', privateKey.substring(0, 30));
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId:   process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey
-      })
-    });
-    console.log('✅ Firebase Admin inicializado con variables de entorno');
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey
+        })
+      });
+      console.log('✅ Firebase Admin inicializado con variables de entorno');
+    }
   } catch (e2) {
     console.error('❌ Error iniciando Firebase:', e2.message);
     process.exit(1);
@@ -106,7 +114,7 @@ bot.on('photo', async (ctx) => {
     ctx.reply('⏳ Recibido. Analizando con Groq (Llama 3.2 Vision)...');
     console.log('📸 Foto recibida — procesando...');
 
-    const fileId   = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+    const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
     const fileLink = await ctx.telegram.getFileLink(fileId);
     const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
@@ -152,16 +160,16 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
     }
 
     // ── Cargar datos del grupo desde Firestore ───────────────
-    const groupRef  = db.collection('groups').doc(DEFAULT_GROUP_ID);
-    const doc       = await groupRef.get();
+    const groupRef = db.collection('groups').doc(DEFAULT_GROUP_ID);
+    const doc = await groupRef.get();
     const groupData = doc.exists ? doc.data() : { matches: [], players: [] };
-    const players   = groupData.players || [];
+    const players = groupData.players || [];
 
     // ── Resolver ID de jugador por nombre o alias numérico ──
     const findId = (name, num) => {
       const p = players.find(x =>
-        (num  && String(x.alias) === String(num)) ||
-        (name && x.name.toLowerCase()  === name.toLowerCase()) ||
+        (num && String(x.alias) === String(num)) ||
+        (name && x.name.toLowerCase() === name.toLowerCase()) ||
         (name && x.alias?.toLowerCase() === name.toLowerCase())
       );
       return p ? p.id : null;
@@ -184,10 +192,10 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
         player1Name: p.p2_j1,
         player2Name: p.p2_j2
       },
-      score:  { team1: p.p1_pts, team2: p.p2_pts },
+      score: { team1: p.p1_pts, team2: p.p2_pts },
       winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
-      shoes:  { team1Given: 0, team2Given: 0 },
-      notes:  'Registrado vía Telegram (Groq)'
+      shoes: { team1Given: 0, team2Given: 0 },
+      notes: 'Registrado vía Telegram (Groq)'
     }));
 
     groupData.matches = [...(groupData.matches || []), ...newMatches];
@@ -206,5 +214,5 @@ bot.launch()
   .then(() => console.log(`🤖 Bot de Telegram activo — Grupo por defecto: ${DEFAULT_GROUP_ID}`));
 
 // Graceful shutdown
-process.once('SIGINT',  () => bot.stop('SIGINT'));
+process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
