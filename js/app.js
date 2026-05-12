@@ -50,9 +50,13 @@ const App = {
   init() {
     DB.init();
 
-    // Force show app and bypass auth completely as requested
-    Auth.init(); // Still call it to set currentUser
-    this._showApp();
+    // Check auth session
+    const hasSession = Auth.init();
+    if (hasSession) {
+      this._showApp();
+    } else {
+      this._showAuth();
+    }
 
     // Restore theme
     const theme = localStorage.getItem('dominostats_theme') || 'dark';
