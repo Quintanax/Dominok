@@ -260,7 +260,18 @@
   letter-spacing: 0.08em; color: var(--text-muted); flex-shrink: 0;
 }
 
+/* Desktop layout: horizontal ultra-compact */
+@media (min-width: 769px) {
+  .hs-card-main { padding: 8px 16px; gap: 24px; }
+  .hs-card-left { display: flex; align-items: center; gap: 20px; }
+  .hs-date { margin-bottom: 0; min-width: 80px; }
+  .hs-teams { flex-direction: row; align-items: center; gap: 16px; }
+  .hs-card-right { flex-direction: row; align-items: center; gap: 20px; }
+  .hs-winner-badge { margin-top: 0; }
+}
+
 @media (max-width: 400px) {
+
   .hs-filters-grid { grid-template-columns: 1fr; }
 }
 
@@ -273,15 +284,15 @@
 }
 
 .match-actions {
-  display: flex; flex-direction: column;
-  gap: 4px; flex-shrink: 0; margin-left: 4px;
+  display: flex; flex-direction: row;
+  gap: 6px; flex-shrink: 0; margin-left: 8px;
 }
 
 .match-act-btn {
-  width: 30px; height: 30px;
+  width: 32px; height: 32px;
   border-radius: 8px; border: 1px solid var(--border-color);
   background: rgba(255,255,255,0.04);
-  font-size: 0.85rem; cursor: pointer;
+  font-size: 0.9rem; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 150ms;
 }
@@ -289,6 +300,6 @@
 .match-act-btn.danger:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); }
 
 @media (max-width: 768px) {
-  .match-actions { flex-direction: row; gap: 4px; }
-  .match-act-btn { width: 28px; height: 28px; font-size: 0.78rem; }
+  .match-actions { flex-direction: column; gap: 4px; }
+  .match-act-btn { width: 30px; height: 30px; font-size: 0.85rem; }
 }
