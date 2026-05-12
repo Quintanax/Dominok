@@ -100,20 +100,20 @@ const MatchesPage = {
       const w1 = m.winner === 'team1';
       const shoesInfo = ((m.shoes && m.shoes.team1Given) || 0) + ((m.shoes && m.shoes.team2Given) || 0);
       return `<tr>
-        <td>${Utils.fmtDate(m.date)}</td>
-        <td>
+        <td data-label="Fecha">${Utils.fmtDate(m.date)}</td>
+        <td data-label="Pareja 1">
           <div class="match-pair">${t1n}</div>
         </td>
-        <td>
+        <td data-label="Pareja 2">
           <div class="match-pair">${t2n}</div>
         </td>
-        <td class="col-num">
+        <td class="col-num" data-label="Resultado">
           <span class="${w1 ? 'score-win' : 'score-lose'}" style="font-weight:800;font-family:var(--font-mono)">${m.score.team1}</span>
           <span style="color:var(--text-muted)"> : </span>
           <span class="${!w1 ? 'score-win' : 'score-lose'}" style="font-weight:800;font-family:var(--font-mono)">${m.score.team2}</span>
         </td>
-        <td><span class="badge badge-success">✅ ${w1 ? 'Pareja 1' : 'Pareja 2'}</span></td>
-        <td class="col-num">${shoesInfo > 0 ? `<span class="badge badge-warning">👟 ${shoesInfo}</span>` : '—'}</td>
+        <td data-label="Ganador"><span class="badge badge-success">✅ ${w1 ? 'Pareja 1' : 'Pareja 2'}</span></td>
+        <td class="col-num" data-label="Zapatos">${shoesInfo > 0 ? `<span class="badge badge-warning">👟 ${shoesInfo}</span>` : '—'}</td>
         <td>
           <div class="row-actions">
             <button class="row-action-btn" onclick="MatchesPage.openEdit('${m.id}')" title="Editar">✏️</button>
