@@ -1,8 +1,8 @@
 /* =========================================
-   HISTORY PAGE
+   HISTORY PAGE — Redesigned v2
    ========================================= */
 const HistoryPage = {
-  state: { page: 1, player: '', pair: '', type: '', dateFrom: '', dateTo: '' },
+  state: { page: 1, player: '', type: '', dateFrom: '', dateTo: '', expanded: null, filtersOpen: false },
 
   render() {
     const groupId = Auth.getGroupId();
@@ -11,24 +11,24 @@ const HistoryPage = {
 
     return `
     <div class="page-enter">
-      <div class="page-header">
+      <div class="page-header" style="margin-bottom:12px">
         <div class="page-header-left">
           <div class="page-header-title">📚 Historial</div>
-          <div class="page-header-sub">Historial completo de partidas con filtros avanzados</div>
+          <div class="page-header-sub">Registro completo de partidas</div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-ghost btn-sm" onclick="HistoryPage.exportHistory()">⬇ Exportar</button>
+          <button class="btn btn-ghost btn-sm" onclick="HistoryPage.toggleFilters()" id="filters-toggle-btn">🔍 Filtros</button>
+          <button class="btn btn-ghost btn-sm" onclick="HistoryPage.exportHistory()" title="Exportar">⬇</button>
         </div>
       </div>
 
-      <!-- Advanced Filters -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="card-title" style="margin-bottom:12px">🔍 Filtros Avanzados</div>
-        <div class="form-grid">
+      <!-- Filters collapsible -->
+      <div class="hs-filters-panel" id="hs-filters-panel" style="display:none">
+        <div class="hs-filters-grid">
           <div class="form-group">
             <label class="form-label">Jugador</label>
             <select id="h-player" class="form-select" onchange="HistoryPage.applyFilters()">
-              <option value="">Todos los jugadores</option>
+              <option value="">Todos</option>
               ${playerOpts}
             </select>
           </div>
@@ -49,53 +49,46 @@ const HistoryPage = {
             <input type="date" id="h-to" class="form-input" onchange="HistoryPage.applyFilters()" />
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="HistoryPage.clearFilters()">✕ Limpiar filtros</button>
+        <button class="btn btn-ghost btn-sm" onclick="HistoryPage.clearFilters()">✕ Limpiar</button>
       </div>
 
-      <!-- Results -->
-      <div class="card" style="padding:0;overflow:hidden">
-        <div style="padding:8px 12px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between">
-          <span id="history-count" style="font-size:0.875rem;color:var(--text-secondary)">Cargando...</span>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table" id="history-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Pareja 1</th>
-                <th>Pareja 2</th>
-                <th class="col-num">Resultado</th>
-                <th>Ganador</th>
-                <th>Tipo</th>
-                <th class="col-num">👟</th>
-                <th>Notas</th>
-              </tr>
-            </thead>
-            <tbody id="history-tbody"></tbody>
-          </table>
-        </div>
-        <div style="padding:0 16px" id="history-pagination"></div>
+      <!-- Count bar -->
+      <div class="hs-count-bar">
+        <span id="history-count" class="hs-count-text">Cargando...</span>
       </div>
+
+      <!-- Cards list -->
+      <div id="history-list" class="hs-list"></div>
+      <div id="history-pagination" style="padding:4px 0"></div>
     </div>`;
   },
 
   afterRender() { this.applyFilters(); },
 
+  toggleFilters() {
+    this.state.filtersOpen = !this.state.filtersOpen;
+    const panel = document.getElementById('hs-filters-panel');
+    const btn = document.getElementById('filters-toggle-btn');
+    if (panel) panel.style.display = this.state.filtersOpen ? 'block' : 'none';
+    if (btn) btn.textContent = this.state.filtersOpen ? '✕ Cerrar' : '🔍 Filtros';
+  },
+
+  toggleExpand(id) {
+    this.state.expanded = this.state.expanded === id ? null : id;
+    this.loadTable();
+  },
+
   getFiltered() {
     const groupId = Auth.getGroupId();
     let matches = DB.getMatches(groupId);
     const { player, type, dateFrom, dateTo } = this.state;
-
-    if (player) {
-      matches = matches.filter(m =>
-        m.team1.player1 === player || m.team1.player2 === player ||
-        m.team2.player1 === player || m.team2.player2 === player
-      );
-    }
+    if (player) matches = matches.filter(m =>
+      m.team1.player1 === player || m.team1.player2 === player ||
+      m.team2.player1 === player || m.team2.player2 === player
+    );
     if (type) matches = matches.filter(m => m.type === type);
     if (dateFrom) matches = matches.filter(m => m.date >= dateFrom);
     if (dateTo) matches = matches.filter(m => m.date <= dateTo);
-
     return matches;
   },
 
@@ -110,43 +103,81 @@ const HistoryPage = {
 
   clearFilters() {
     this.state = { ...this.state, player: '', type: '', dateFrom: '', dateTo: '' };
-    document.getElementById('h-player').value = '';
-    document.getElementById('h-type').value = '';
-    document.getElementById('h-from').value = '';
-    document.getElementById('h-to').value = '';
+    ['h-player','h-type','h-from','h-to'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     this.loadTable();
   },
 
   loadTable() {
     const filtered = this.getFiltered();
     const paged = Utils.paginate(filtered, this.state.page, 20);
-    const tbody = document.getElementById('history-tbody');
+    const listEl = document.getElementById('history-list');
     const paginEl = document.getElementById('history-pagination');
     const countEl = document.getElementById('history-count');
 
-    if (countEl) countEl.textContent = `${filtered.length} partidas encontradas`;
+    if (countEl) countEl.textContent = `${filtered.length} partida${filtered.length !== 1 ? 's' : ''} encontrada${filtered.length !== 1 ? 's' : ''}`;
+    if (!listEl) return;
 
-    if (!tbody) return;
-    tbody.innerHTML = paged.items.map(m => {
+    if (!paged.items.length) {
+      listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">Sin partidas que coincidan</div></div>`;
+      return;
+    }
+
+    listEl.innerHTML = paged.items.map(m => {
       const t1n = `${Utils.escHtml(Utils.playerName(m.team1.player1))} & ${Utils.escHtml(Utils.playerName(m.team1.player2))}`;
       const t2n = `${Utils.escHtml(Utils.playerName(m.team2.player1))} & ${Utils.escHtml(Utils.playerName(m.team2.player2))}`;
       const w1 = m.winner === 'team1';
-      const shoesTotal = (m.shoes.team1Given || 0) + (m.shoes.team2Given || 0);
-      return `<tr>
-        <td style="white-space:nowrap">${Utils.fmtDate(m.date)}</td>
-        <td><span style="font-weight:${w1?700:400};color:${w1?'var(--accent-success)':'inherit'}">${t1n}</span></td>
-        <td><span style="font-weight:${!w1?700:400};color:${!w1?'var(--accent-success)':'inherit'}">${t2n}</span></td>
-        <td class="col-num">
-          <span style="font-family:var(--font-mono);font-weight:800">
-            <span class="${w1?'score-win':'score-lose'}">${m.score.team1}</span> : <span class="${!w1?'score-win':'score-lose'}">${m.score.team2}</span>
-          </span>
-        </td>
-        <td><span class="badge badge-success">✅ ${w1?'P1':'P2'}</span></td>
-        <td><span class="chip ${m.type==='tournament'?'chip-success':'chip-primary'}">${m.type==='tournament'?'🏆':'🎮'} ${m.type==='tournament'?'Torneo':'Amistoso'}</span></td>
-        <td class="col-num">${shoesTotal > 0 ? `<span class="badge badge-warning">👟 ${shoesTotal}</span>` : '—'}</td>
-        <td class="wrap" style="max-width:200px;font-size:0.78rem;color:var(--text-secondary)">${Utils.escHtml(m.notes || '—')}</td>
-      </tr>`;
-    }).join('') || `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📚</div><div class="empty-text">Sin partidas que coincidan con los filtros</div></div></td></tr>`;
+      const shoesTotal = (m.shoes?.team1Given || 0) + (m.shoes?.team2Given || 0);
+      const isOpen = this.state.expanded === m.id;
+      const typeChip = m.type === 'tournament'
+        ? `<span class="chip chip-success" style="font-size:0.65rem;padding:1px 7px">🏆 Torneo</span>`
+        : `<span class="chip chip-primary" style="font-size:0.65rem;padding:1px 7px">🎮 Amistoso</span>`;
+
+      return `
+      <div class="hs-card ${isOpen ? 'hs-card-open' : ''}">
+        <div class="hs-card-main" onclick="HistoryPage.toggleExpand('${m.id}')">
+          <div class="hs-card-left">
+            <div class="hs-date">${Utils.fmtDate(m.date)}</div>
+            <div class="hs-teams">
+              <span class="hs-team ${w1 ? 'hs-winner' : ''}">${t1n}</span>
+              <span class="hs-vs">vs</span>
+              <span class="hs-team ${!w1 ? 'hs-winner' : ''}">${t2n}</span>
+            </div>
+          </div>
+          <div class="hs-card-right">
+            <div class="hs-score">
+              <span class="${w1 ? 'score-win' : 'score-lose'}">${m.score.team1}</span>
+              <span class="hs-score-sep">:</span>
+              <span class="${!w1 ? 'score-win' : 'score-lose'}">${m.score.team2}</span>
+            </div>
+            <div class="hs-winner-badge">${w1 ? 'P1 ✓' : 'P2 ✓'}</div>
+          </div>
+          <div class="rk-chevron">${isOpen ? '▲' : '▼'}</div>
+        </div>
+        ${isOpen ? `
+        <div class="hs-card-detail">
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Tipo</span>
+            ${typeChip}
+          </div>
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Ganador</span>
+            <span class="badge badge-success">✅ ${w1 ? 'Pareja 1' : 'Pareja 2'}</span>
+          </div>
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Zapatos</span>
+            <span>${shoesTotal > 0 ? `<span class="badge badge-warning">👟 ${shoesTotal}</span>` : '—'}</span>
+          </div>
+          ${m.notes ? `
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Notas</span>
+            <span style="font-size:0.8rem;color:var(--text-secondary);flex:1;text-align:right">${Utils.escHtml(m.notes)}</span>
+          </div>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('');
 
     if (paginEl) paginEl.innerHTML = paged.total > 20 ? Utils.renderPagination(paged, 'HistoryPage.goPage') : '';
   },

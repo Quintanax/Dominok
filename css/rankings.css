@@ -187,3 +187,79 @@
   .rk-stat { min-width: 24px; }
   .rk-eff-bar { width: 36px; }
 }
+
+/* =========================================
+   HISTORY CARDS
+   ========================================= */
+.hs-filters-panel {
+  background: linear-gradient(145deg, #141829, #1c2035);
+  border: 1px solid var(--border-color);
+  border-radius: 12px; padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: slideDown 200ms ease;
+}
+.hs-filters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.hs-count-bar { padding: 6px 2px 8px; }
+.hs-count-text { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+
+.hs-list { display: flex; flex-direction: column; gap: 6px; }
+
+.hs-card {
+  background: linear-gradient(145deg, #141829, #1a1f38);
+  border: 1px solid var(--border-color);
+  border-radius: 12px; overflow: hidden;
+  transition: border-color 200ms;
+}
+.hs-card-open { border-color: rgba(99,102,241,0.5); }
+.hs-card-main {
+  display: flex; align-items: center;
+  gap: 10px; padding: 11px 14px;
+  cursor: pointer; user-select: none;
+}
+.hs-card-main:hover { background: rgba(255,255,255,0.02); }
+
+.hs-card-left { flex: 1; min-width: 0; }
+.hs-date {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 4px;
+}
+.hs-teams { display: flex; flex-direction: column; gap: 2px; }
+.hs-team {
+  font-size: 0.82rem; font-weight: 500; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hs-winner { color: var(--accent-success); font-weight: 700; }
+.hs-vs {
+  font-size: 0.62rem; color: var(--text-muted);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.hs-card-right {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 4px; flex-shrink: 0;
+}
+.hs-score {
+  font-family: var(--font-mono); font-size: 1rem; font-weight: 800;
+  display: flex; align-items: center; gap: 4px;
+}
+.hs-score-sep { color: var(--text-muted); font-size: 0.75rem; }
+.hs-winner-badge { font-size: 0.65rem; font-weight: 700; color: var(--accent-success); letter-spacing: 0.04em; }
+
+.hs-card-detail {
+  background: rgba(0,0,0,0.2);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 7px;
+  animation: slideDown 200ms ease;
+}
+.hs-detail-row {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+}
+.hs-detail-label {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted); flex-shrink: 0;
+}
+
+@media (max-width: 400px) {
+  .hs-filters-grid { grid-template-columns: 1fr; }
+}
