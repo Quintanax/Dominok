@@ -1,0 +1,189 @@
+/* =========================================
+   RANKINGS v2 — Leaderboard List UI
+   ========================================= */
+
+/* ── Tabs ─────────────────────────────────── */
+.rk-tabs {
+  display: flex; gap: 4px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 10px; padding: 4px;
+}
+.rk-tab {
+  padding: 5px 12px; border-radius: 7px;
+  font-size: 0.78rem; font-weight: 600;
+  background: none; color: var(--text-secondary);
+  transition: all 150ms;
+}
+.rk-tab.active {
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+}
+
+/* ── Podium ──────────────────────────────── */
+.rk-podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px; margin-bottom: 16px;
+}
+.rk-podium-slot {
+  background: linear-gradient(145deg, #141829, #1c2035);
+  border: 1px solid var(--border-color);
+  border-radius: 14px; padding: 14px 10px;
+  text-align: center; cursor: default;
+  transition: all 200ms;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.rk-podium-1 { order: 2; }
+.rk-podium-2 { order: 1; }
+.rk-podium-3 { order: 3; }
+.rk-podium-medal { font-size: 1.4rem; margin-bottom: 6px; }
+.rk-podium-eff {
+  font-size: 1.1rem; font-weight: 900; margin-top: 6px;
+}
+.rk-podium-eff span {
+  font-size: 0.6rem; font-weight: 600;
+  color: var(--text-muted); margin-left: 2px;
+}
+
+/* ── Sort Bar ────────────────────────────── */
+.rk-sort-bar {
+  display: flex; gap: 6px; margin-bottom: 10px;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.rk-sort-bar::-webkit-scrollbar { display: none; }
+.rk-sort-btn {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 600;
+  background: var(--bg-elevated); color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  white-space: nowrap; transition: all 150ms; flex-shrink: 0;
+}
+.rk-sort-btn.active {
+  background: rgba(99,102,241,0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ── List ────────────────────────────────── */
+.rk-list { display: flex; flex-direction: column; gap: 6px; }
+
+.rk-row {
+  background: linear-gradient(145deg, #141829, #1a1f38);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 200ms;
+}
+.rk-row-open { border-color: rgba(99,102,241,0.5); }
+.rk-row:first-child { border-left: 3px solid #FFD700; }
+.rk-row:nth-child(2) { border-left: 3px solid #C0C0C0; }
+.rk-row:nth-child(3) { border-left: 3px solid #CD7F32; }
+
+.rk-row-main {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 14px;
+  cursor: pointer; user-select: none;
+}
+.rk-row-main:hover { background: rgba(255,255,255,0.02); }
+
+.rk-pos { width: 28px; flex-shrink: 0; }
+
+.rk-name-col {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rk-name {
+  font-size: 0.9rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+.rk-streak { font-size: 0.7rem; }
+
+.rk-stats-inline {
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.rk-stat {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0; min-width: 28px;
+}
+.rk-stat b { font-size: 0.9rem; font-weight: 800; line-height: 1.1; }
+.rk-stat small { font-size: 0.6rem; color: var(--text-muted); line-height: 1; }
+
+.rk-eff-col {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 4px; flex-shrink: 0; min-width: 44px;
+}
+.rk-eff-val { font-size: 0.8rem; font-weight: 700; }
+.rk-eff-bar {
+  width: 44px; height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px; overflow: hidden;
+}
+.rk-eff-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--accent-primary);
+  transition: width 400ms ease;
+}
+.rk-eff-fill.green { background: var(--accent-success); }
+.rk-eff-fill.red { background: var(--accent-danger); }
+
+.rk-chevron {
+  font-size: 0.65rem; color: var(--text-muted);
+  flex-shrink: 0; margin-left: 2px;
+}
+
+/* ── Expandable Detail ───────────────────── */
+.rk-detail {
+  background: rgba(0,0,0,0.2);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 14px 16px;
+  animation: slideDown 200ms ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rk-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px; margin-bottom: 10px;
+}
+.rk-detail-item { text-align: center; }
+.rk-detail-label {
+  font-size: 0.6rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin-bottom: 3px;
+}
+.rk-detail-val {
+  font-size: 1rem; font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* ── RESPONSIVE ──────────────────────────── */
+@media (max-width: 768px) {
+  /* Podium: 3 cols remain but more compact */
+  .rk-podium { gap: 6px; }
+  .rk-podium-slot { padding: 10px 6px; border-radius: 12px; }
+  .rk-podium-medal { font-size: 1.1rem; margin-bottom: 4px; }
+  .rk-podium-eff { font-size: 0.95rem; }
+
+  /* Row: tighter on mobile */
+  .rk-row-main { padding: 10px 10px; gap: 8px; }
+  .rk-name { font-size: 0.82rem; }
+  .rk-stat b { font-size: 0.82rem; }
+
+  /* Detail: 2 cols on mobile */
+  .rk-detail-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Tabs: smaller text on mobile */
+  .rk-tab { padding: 5px 10px; font-size: 0.72rem; }
+}
+
+@media (max-width: 400px) {
+  /* Hide D on very small screens if needed */
+  .rk-stats-inline { gap: 5px; }
+  .rk-stat { min-width: 24px; }
+  .rk-eff-bar { width: 36px; }
+}
