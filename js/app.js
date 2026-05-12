@@ -128,7 +128,10 @@ const App = {
       }
 
       this._buildSidebar();
-      this.navigate(Auth.isAdmin() ? 'admin_dashboard' : 'dashboard');
+      const savedPage = localStorage.getItem('dominostats_current_page');
+      const defaultPage = Auth.isAdmin() ? 'admin_dashboard' : 'dashboard';
+      const targetPage = (savedPage && this.pages[savedPage]) ? savedPage : defaultPage;
+      this.navigate(targetPage);
       this._loadNotifications();
 
       // Start real-time Firebase listener now that we have a logged-in user
@@ -214,6 +217,7 @@ const App = {
     if (pageTitle) pageTitle.textContent = this.pageTitles[page] || page;
 
     this.currentPage = page;
+    localStorage.setItem('dominostats_current_page', page);
 
     // Render page
     const content = document.getElementById('page-content');
