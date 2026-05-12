@@ -23,26 +23,25 @@ try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
-  console.log('✅ Firebase Admin inicializado con serviceAccountKey.json');
+  console.log('✅ Firebase Admin: Inicializado con archivo físico (Local)');
 } catch (e) {
-  // Fallback: intentar con variables de entorno (para Railway/producción sin el JSON)
-  console.warn('⚠️  serviceAccountKey.json no encontrado, intentando con variables de entorno...');
+  console.warn('⚠️  Archivo físico no encontrado, usando variables de entorno...');
   try {
-    if (process.env.FIREBASE_BASE64) {
-      console.log('🔑 Detectada variable FIREBASE_BASE64, decodificando...');
-      const decoded = Buffer.from(process.env.FIREBASE_BASE64, 'base64').toString('utf8');
+    const b64 = process.env.FIREBASE_BASE64;
+    if (b64 && b64.trim().length > 100) {
+      console.log('🔑 Firebase Admin: Usando FIREBASE_BASE64...');
+      const decoded = Buffer.from(b64.trim(), 'base64').toString('utf8');
+      const serviceAccount = JSON.parse(decoded.trim());
       admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(decoded))
+        credential: admin.credential.cert(serviceAccount)
       });
-      console.log('✅ Firebase Admin inicializado desde FIREBASE_BASE64');
-    } else {
-      let privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
+      console.log('✅ Firebase Admin: Inicializado desde Base64 (Railway)');
+    } else if (process.env.FIREBASE_PRIVATE_KEY) {
+      console.log('🔑 Firebase Admin: Usando variables individuales (Legacy)...');
+      let privateKey = process.env.FIREBASE_PRIVATE_KEY
         .trim()
-        .replace(/^["'`]|["'`]$/g, '')   // Elimina comillas envolventes que Railway puede añadir
-        .replace(/\\n/g, '\n');            // Convierte \n literales en saltos de línea reales
-
-      console.log('🔑 Longitud de la llave procesada:', privateKey.length);
-      console.log('🔑 Inicia con:', privateKey.substring(0, 30));
+        .replace(/^["'`]|["'`]$/g, '')
+        .replace(/\\n/g, '\n');
 
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -51,10 +50,12 @@ try {
           privateKey
         })
       });
-      console.log('✅ Firebase Admin inicializado con variables de entorno');
+      console.log('✅ Firebase Admin: Inicializado con variables individuales');
+    } else {
+      throw new Error('No se encontró FIREBASE_BASE64 ni archivo JSON');
     }
   } catch (e2) {
-    console.error('❌ Error iniciando Firebase:', e2.message);
+    console.error('❌ Error FATAL iniciando Firebase:', e2.message);
     process.exit(1);
   }
 }
@@ -78,7 +79,7 @@ async function callGroq(prompt, base64Image) {
         ]
       }
     ],
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: 'llama-3.2-11b-vision-preview',
     temperature: 0.1,
     max_tokens: 1024,
     top_p: 1,
