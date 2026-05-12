@@ -62,6 +62,14 @@ try {
 
 const db = admin.firestore();
 
+// Test de conexión inmediato
+db.collection('groups').limit(1).get()
+  .then(() => console.log('🚀 Firestore: Conexión de prueba EXITOSA'))
+  .catch(err => {
+    console.error('❌ Firestore: Conexión de prueba FALLIDA');
+    console.error('Detalle:', err.message);
+  });
+
 // ─── 3. INICIALIZAR GROQ ──────────────────────────────────────
 const groq = new Groq({ apiKey: GROQ_API_KEY });
 
