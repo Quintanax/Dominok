@@ -201,16 +201,17 @@ const DashboardPage = {
             <div class="match-vs">vs</div>
             <div class="match-team" style="color:${!w1?'var(--accent-success)':'var(--text-secondary)'}">${Utils.escHtml(t2n)}</div>
           </div>
-          <div style="text-align:right">
-            <div class="match-score" style="font-size:0.9rem;font-family:var(--font-mono);font-weight:800">
+          <div class="match-score-block">
+            <div class="match-score">
               <span class="${w1?'score-win':'score-lose'}">${m.score.team1}</span>
-              <span style="color:var(--text-muted);font-size:0.7rem">vs</span>
+              <span class="match-score-sep">:</span>
               <span class="${!w1?'score-win':'score-lose'}">${m.score.team2}</span>
             </div>
-            <span class="chip ${m.type==='tournament'?'chip-success':'chip-primary'}" style="font-size:0.7rem">${m.type==='tournament'?'Torneo':'Amistoso'}</span>
+            <span class="chip ${m.type==='tournament'?'chip-success':'chip-primary'} match-type-chip">${m.type==='tournament'?'🏆':'🎮'} ${m.type==='tournament'?'Torneo':'Amist.'}</span>
           </div>
         </div>`;
       }).join('') || '<div class="empty-state"><div class="empty-text">Sin partidas registradas</div></div>';
+
     }
 
     // Activity feed

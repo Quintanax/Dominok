@@ -75,26 +75,72 @@
 .donut-pct { font-size: 1.4rem; font-weight: 800; }
 .donut-sub { font-size: 0.7rem; color: var(--text-secondary); }
 
-/* Recent matches */
+/* Recent matches — compact single-row */
 .match-mini {
-  display: flex; align-items: center; gap: 12px; padding: 6px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-subtle);
 }
 .match-mini:last-child { border-bottom: none; }
-.match-teams { flex: 1; }
-.match-team { font-size: 0.82rem; font-weight: 600; }
-.match-vs { font-size: 0.7rem; color: var(--text-muted); margin: 2px 0; }
-.match-score {
-  font-size: 1rem; font-weight: 800; font-family: var(--font-mono);
-  display: flex; flex-direction: column; align-items: flex-end;
-}
-.match-type-chip { font-size: 0.7rem; }
 
+/* Teams column: winner stacked on loser, compact */
+.match-teams {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.match-team {
+  font-size: 0.78rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.match-vs {
+  font-size: 0.58rem; color: var(--text-muted);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* Score + chip on right */
+.match-score-block {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;
+}
+.match-score {
+  font-size: 0.88rem; font-weight: 800; font-family: var(--font-mono);
+  display: flex; align-items: center; gap: 3px;
+}
+.match-score-sep { color: var(--text-muted); font-size: 0.7rem; }
+.match-type-chip { font-size: 0.65rem; }
+
+/* ── Responsive breakpoints ─────────────── */
 @media (max-width: 1200px) {
   .dashboard-kpis { grid-template-columns: repeat(2, 1fr); }
   .dashboard-row.cols-3-2 { grid-template-columns: 1fr; }
   .dashboard-row.cols-2-1 { grid-template-columns: 1fr; }
+  .dashboard-row[style*="grid-template-columns:1fr 2fr 1fr"] { grid-template-columns: 1fr !important; }
 }
-@media (max-width: 600px) {
+
+@media (max-width: 768px) {
+  /* KPIs: 2×2 grid, tighter */
+  .dashboard-kpis { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+  /* All rows → single column */
+  .dashboard-row,
+  .dashboard-row.cols-3-2,
+  .dashboard-row.cols-2-1,
+  .dashboard-row.cols-1-1 { grid-template-columns: 1fr !important; gap: 8px; }
+
+  /* Hide chart on mobile to save space (activity feed takes over) */
+  #monthly-chart { display: none; }
+
+  /* Donut card: row layout instead of column */
+  .card:has(#type-donut) { flex-direction: row !important; gap: 16px; align-items: center; }
+
+  /* Top player rows: tighter */
+  .top-player-row { padding: 7px 12px; gap: 8px; }
+  .top-player-name { font-size: 0.8rem; }
+
+  /* Match mini: already compact, just enforce truncation */
+  .match-team { max-width: 160px; }
+}
+
+@media (max-width: 400px) {
   .dashboard-kpis { grid-template-columns: 1fr 1fr; }
+  .match-team { font-size: 0.72rem; max-width: 120px; }
 }
