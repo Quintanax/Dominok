@@ -5,7 +5,12 @@ const Utils = {
   // Format date
   fmtDate(isoDate, format = 'short') {
     if (!isoDate) return '—';
-    const d = new Date(isoDate);
+    let d = new Date(isoDate);
+    // Fix: if date is YYYY-MM-DD, parse it at noon local time to avoid timezone offset pushing it to previous day
+    if (typeof isoDate === 'string' && isoDate.length === 10) {
+      d = new Date(isoDate + 'T12:00:00');
+    }
+    
     if (format === 'short') return d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     if (format === 'long') return d.toLocaleDateString('es-VE', { day: 'numeric', month: 'long', year: 'numeric' });
     if (format === 'relative') return this.relativeTime(d);
