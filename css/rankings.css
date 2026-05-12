@@ -263,3 +263,32 @@
 @media (max-width: 400px) {
   .hs-filters-grid { grid-template-columns: 1fr; }
 }
+
+/* =========================================
+   MATCH CARD — Action buttons
+   ========================================= */
+.match-card .hs-card-main {
+  /* Extra padding-right for action buttons */
+  padding-right: 10px;
+}
+
+.match-actions {
+  display: flex; flex-direction: column;
+  gap: 4px; flex-shrink: 0; margin-left: 4px;
+}
+
+.match-act-btn {
+  width: 30px; height: 30px;
+  border-radius: 8px; border: 1px solid var(--border-color);
+  background: rgba(255,255,255,0.04);
+  font-size: 0.85rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 150ms;
+}
+.match-act-btn:hover { background: rgba(255,255,255,0.1); }
+.match-act-btn.danger:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); }
+
+@media (max-width: 768px) {
+  .match-actions { flex-direction: row; gap: 4px; }
+  .match-act-btn { width: 28px; height: 28px; font-size: 0.78rem; }
+}

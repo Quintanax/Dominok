@@ -1,57 +1,44 @@
 /* =========================================
-   MATCHES PAGE — Register & Manage Matches
+   MATCHES PAGE — Redesigned v2
    ========================================= */
 const MatchesPage = {
-  state: { page: 1, sort: 'date', dir: 'desc', filter: 'all', search: '' },
+  state: { page: 1, sort: 'date', dir: 'desc', filter: 'all', search: '', expanded: null },
 
   render() {
     return `
     <div class="page-enter">
-      <div class="page-header">
+      <div class="page-header" style="margin-bottom:12px">
         <div class="page-header-left">
           <div class="page-header-title">🎮 Partidas</div>
           <div class="page-header-sub">Gestión y registro de partidas</div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-ghost btn-sm" onclick="MatchesPage.exportMatches()">⬇ Exportar</button>
-          <button class="btn btn-secondary btn-sm" onclick="GeminiOCR.openUploadModal()" title="Cargar resultados desde imagen">📷 Cargar Imagen</button>
-          <button class="btn btn-primary" onclick="MatchesPage.openNew()">+ Nueva Partida</button>
+          <button class="btn btn-ghost btn-sm" onclick="MatchesPage.exportMatches()" title="Exportar">⬇</button>
+          <button class="btn btn-secondary btn-sm" onclick="GeminiOCR.openUploadModal()" title="Cargar imagen">📷</button>
+          <button class="btn btn-primary btn-sm" onclick="MatchesPage.openNew()">+ Nueva</button>
         </div>
       </div>
 
-      <div class="filters-bar">
+      <!-- Filter bar -->
+      <div class="filters-bar" style="margin-bottom:10px">
         <div class="filter-pill active" id="filter-all" onclick="MatchesPage.setFilter('all',this)">Todas</div>
         <div class="filter-pill" id="filter-today" onclick="MatchesPage.setFilter('today',this)">Hoy</div>
-        <div class="filter-pill" id="filter-week" onclick="MatchesPage.setFilter('week',this)">Esta semana</div>
+        <div class="filter-pill" id="filter-week" onclick="MatchesPage.setFilter('week',this)">Semana</div>
         <div class="filters-spacer"></div>
-        <div class="search-bar" style="max-width:200px">
+        <div class="search-bar" style="max-width:160px">
           <span class="search-icon">🔍</span>
           <input class="search-input" placeholder="Buscar..." oninput="MatchesPage.setSearch(this.value)" />
         </div>
       </div>
 
-      <!-- Table -->
-      <div class="card" style="padding:0;overflow:hidden">
-        <div class="table-wrapper">
-          <table class="data-table" id="matches-table">
-            <thead>
-              <tr>
-                <th onclick="MatchesPage.setSort('date')" class="sorted">Fecha ▾</th>
-                <th>Pareja 1</th>
-                <th>Pareja 2</th>
-                <th class="col-num">Resultado</th>
-                <th>Ganador</th>
-                <th class="col-num">👟</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="matches-tbody">
-              <tr><td colspan="8"><div class="empty-state"><div class="spinner"></div></div></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="padding:0 16px" id="matches-pagination"></div>
+      <!-- Count -->
+      <div style="padding:0 2px 8px">
+        <span id="matches-count" style="font-size:0.8rem;color:var(--text-secondary);font-weight:500"></span>
       </div>
+
+      <!-- Cards list -->
+      <div id="matches-list" class="hs-list"></div>
+      <div id="matches-pagination" style="padding:4px 0"></div>
     </div>`;
   },
 
@@ -86,44 +73,82 @@ const MatchesPage = {
   loadTable() {
     const filtered = this.getFiltered();
     const paged = Utils.paginate(filtered, this.state.page, 15);
-    const tbody = document.getElementById('matches-tbody');
+    const listEl = document.getElementById('matches-list');
     const paginEl = document.getElementById('matches-pagination');
-    if (!tbody) return;
+    const countEl = document.getElementById('matches-count');
 
-    tbody.innerHTML = paged.items.map(m => {
-      const p1_t1 = Utils.playerName(m.team1.player1) !== 'Desconocido' ? Utils.playerName(m.team1.player1) : (m.team1.player1Name || 'Desconocido');
-      const p2_t1 = Utils.playerName(m.team1.player2) !== 'Desconocido' ? Utils.playerName(m.team1.player2) : (m.team1.player2Name || 'Desconocido');
-      const p1_t2 = Utils.playerName(m.team2.player1) !== 'Desconocido' ? Utils.playerName(m.team2.player1) : (m.team2.player1Name || 'Desconocido');
-      const p2_t2 = Utils.playerName(m.team2.player2) !== 'Desconocido' ? Utils.playerName(m.team2.player2) : (m.team2.player2Name || 'Desconocido');
+    if (countEl) countEl.textContent = `${filtered.length} partida${filtered.length !== 1 ? 's' : ''}`;
+    if (!listEl) return;
+
+    if (!paged.items.length) {
+      listEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-text">No hay partidas que mostrar</div></div>`;
+      if (paginEl) paginEl.innerHTML = '';
+      return;
+    }
+
+    listEl.innerHTML = paged.items.map(m => {
+      const p1_t1 = Utils.playerName(m.team1.player1) !== 'Desconocido' ? Utils.playerName(m.team1.player1) : (m.team1.player1Name || '?');
+      const p2_t1 = Utils.playerName(m.team1.player2) !== 'Desconocido' ? Utils.playerName(m.team1.player2) : (m.team1.player2Name || '?');
+      const p1_t2 = Utils.playerName(m.team2.player1) !== 'Desconocido' ? Utils.playerName(m.team2.player1) : (m.team2.player1Name || '?');
+      const p2_t2 = Utils.playerName(m.team2.player2) !== 'Desconocido' ? Utils.playerName(m.team2.player2) : (m.team2.player2Name || '?');
       const t1n = `${Utils.escHtml(p1_t1)} & ${Utils.escHtml(p2_t1)}`;
       const t2n = `${Utils.escHtml(p1_t2)} & ${Utils.escHtml(p2_t2)}`;
       const w1 = m.winner === 'team1';
-      const shoesInfo = ((m.shoes && m.shoes.team1Given) || 0) + ((m.shoes && m.shoes.team2Given) || 0);
-      return `<tr>
-        <td data-label="Fecha">${Utils.fmtDate(m.date)}</td>
-        <td data-label="Pareja 1">
-          <div class="match-pair">${t1n}</div>
-        </td>
-        <td data-label="Pareja 2">
-          <div class="match-pair">${t2n}</div>
-        </td>
-        <td class="col-num" data-label="Resultado">
-          <span class="${w1 ? 'score-win' : 'score-lose'}" style="font-weight:800;font-family:var(--font-mono)">${m.score.team1}</span>
-          <span style="color:var(--text-muted)"> : </span>
-          <span class="${!w1 ? 'score-win' : 'score-lose'}" style="font-weight:800;font-family:var(--font-mono)">${m.score.team2}</span>
-        </td>
-        <td data-label="Ganador"><span class="badge badge-success">✅ ${w1 ? 'Pareja 1' : 'Pareja 2'}</span></td>
-        <td class="col-num" data-label="Zapatos">${shoesInfo > 0 ? `<span class="badge badge-warning">👟 ${shoesInfo}</span>` : '—'}</td>
-        <td>
-          <div class="row-actions">
-            <button class="row-action-btn" onclick="MatchesPage.openEdit('${m.id}')" title="Editar">✏️</button>
-            <button class="row-action-btn danger" onclick="MatchesPage.confirmDelete('${m.id}')" title="Eliminar">🗑️</button>
+      const shoesTotal = ((m.shoes && m.shoes.team1Given) || 0) + ((m.shoes && m.shoes.team2Given) || 0);
+      const isOpen = this.state.expanded === m.id;
+
+      return `
+      <div class="hs-card match-card ${isOpen ? 'hs-card-open' : ''}">
+        <!-- Main compact row -->
+        <div class="hs-card-main" onclick="MatchesPage.toggleExpand('${m.id}')">
+          <div class="hs-card-left">
+            <div class="hs-date">${Utils.fmtDate(m.date)}</div>
+            <div class="hs-teams">
+              <span class="hs-team ${w1 ? 'hs-winner' : ''}">${t1n}</span>
+              <span class="hs-vs">vs</span>
+              <span class="hs-team ${!w1 ? 'hs-winner' : ''}">${t2n}</span>
+            </div>
           </div>
-        </td>
-      </tr>`;
-    }).join('') || `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-text">No hay partidas que mostrar</div></div></td></tr>`;
+          <div class="hs-card-right">
+            <div class="hs-score">
+              <span class="${w1 ? 'score-win' : 'score-lose'}">${m.score.team1}</span>
+              <span class="hs-score-sep">:</span>
+              <span class="${!w1 ? 'score-win' : 'score-lose'}">${m.score.team2}</span>
+            </div>
+            <div class="hs-winner-badge">${w1 ? 'P1 ✓' : 'P2 ✓'}</div>
+          </div>
+          <!-- Action buttons always visible -->
+          <div class="match-actions" onclick="event.stopPropagation()">
+            <button class="match-act-btn" onclick="MatchesPage.openEdit('${m.id}')" title="Editar">✏️</button>
+            <button class="match-act-btn danger" onclick="MatchesPage.confirmDelete('${m.id}')" title="Eliminar">🗑️</button>
+          </div>
+        </div>
+        <!-- Expandable detail -->
+        ${isOpen ? `
+        <div class="hs-card-detail">
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Ganador</span>
+            <span class="badge badge-success">✅ ${w1 ? 'Pareja 1' : 'Pareja 2'}</span>
+          </div>
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Zapatos</span>
+            <span>${shoesTotal > 0 ? `<span class="badge badge-warning">👟 ${shoesTotal}</span>` : '—'}</span>
+          </div>
+          ${m.notes ? `
+          <div class="hs-detail-row">
+            <span class="hs-detail-label">Notas</span>
+            <span style="font-size:0.8rem;color:var(--text-secondary);flex:1;text-align:right">${Utils.escHtml(m.notes)}</span>
+          </div>` : ''}
+        </div>` : ''}
+      </div>`;
+    }).join('');
 
     if (paginEl) paginEl.innerHTML = paged.total > 15 ? Utils.renderPagination(paged, 'MatchesPage.goPage') : '';
+  },
+
+  toggleExpand(id) {
+    this.state.expanded = this.state.expanded === id ? null : id;
+    this.loadTable();
   },
 
   goPage(p) { this.state.page = p; this.loadTable(); },
@@ -193,7 +218,7 @@ const MatchesPage = {
                 <select id="m-t1p2" class="form-select" required>${sel(match?.team1.player2)}</select>
               </div>
               <div class="form-group">
-                <label class="form-label">Puntos Pareja 1</label>
+                <label class="form-label">Puntos P1</label>
                 <input type="number" id="m-s1" class="form-input" value="${match?.score.team1 || ''}" min="0" max="999" required />
               </div>
             </div>
@@ -211,7 +236,7 @@ const MatchesPage = {
                 <select id="m-t2p2" class="form-select" required>${sel(match?.team2.player2)}</select>
               </div>
               <div class="form-group">
-                <label class="form-label">Puntos Pareja 2</label>
+                <label class="form-label">Puntos P2</label>
                 <input type="number" id="m-s2" class="form-input" value="${match?.score.team2 || ''}" min="0" max="999" required />
               </div>
             </div>
@@ -224,7 +249,7 @@ const MatchesPage = {
 
           <div class="modal-footer" style="padding:0;margin-top:8px">
             <button type="button" class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
-            <button type="submit" class="btn btn-primary">${isEdit ? '💾 Guardar' : '🎮 Registrar Amistoso'}</button>
+            <button type="submit" class="btn btn-primary">${isEdit ? '💾 Guardar' : '🎮 Registrar'}</button>
           </div>
         </form>`,
       footer: ''
@@ -242,7 +267,7 @@ const MatchesPage = {
 
     const players = [t1p1, t1p2, t2p1, t2p2];
     if (new Set(players).size < 4) { Toast.error('Los 4 jugadores deben ser diferentes.'); return; }
-    if (isNaN(s1) || isNaN(s2) || s1 === s2) { Toast.error('El resultado no puede ser empate. Verifica los puntos.'); return; }
+    if (isNaN(s1) || isNaN(s2) || s1 === s2) { Toast.error('El resultado no puede ser empate.'); return; }
 
     let t1sh = 0, t2sh = 0;
     if (s1 > 0 && s2 === 0) t1sh = 1;
@@ -278,17 +303,14 @@ const MatchesPage = {
   exportMatches() {
     const matches = this.getFiltered();
     const data = matches.map(m => ({
-      Fecha: m.date,
-      Tipo: m.type,
+      Fecha: m.date, Tipo: m.type,
       'Pareja 1 J1': Utils.playerName(m.team1.player1),
       'Pareja 1 J2': Utils.playerName(m.team1.player2),
       'Pareja 2 J1': Utils.playerName(m.team2.player1),
       'Pareja 2 J2': Utils.playerName(m.team2.player2),
-      'Puntos P1': m.score.team1,
-      'Puntos P2': m.score.team2,
+      'Puntos P1': m.score.team1, 'Puntos P2': m.score.team2,
       Ganador: m.winner === 'team1' ? 'Pareja 1' : 'Pareja 2',
-      'Zapatos P1': m.shoes.team1Given,
-      'Zapatos P2': m.shoes.team2Given,
+      'Zapatos P1': m.shoes.team1Given, 'Zapatos P2': m.shoes.team2Given,
     }));
     Utils.exportCSV(data, 'partidas.csv');
     Toast.success('Exportado a CSV');
