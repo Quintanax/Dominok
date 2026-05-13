@@ -374,6 +374,11 @@ window.CloudDB = {
             console.error('❌ CloudDB: Error guardando en localStorage:', e);
           }
 
+          // Invalidar caché de stats para que se recalcule con los datos nuevos
+          if (typeof DB !== 'undefined' && DB._invalidateStatsCache) {
+            DB._invalidateStatsCache(groupId);
+          }
+
           // Refresh current page view
           try {
             if (typeof App !== 'undefined' && App.currentPage) {
@@ -468,15 +473,26 @@ window.CloudDB = {
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof DB !== 'undefined' && DB.save) {
     const originalSave = DB.save.bind(DB);
+
+    // Debounced sync: acumula llamadas rápidas y solo sincroniza una vez
+    // tras 2 segundos de inactividad (ideal para importaciones masivas)
+    let _syncTimer = null;
+    const _debouncedSync = () => {
+      clearTimeout(_syncTimer);
+      _syncTimer = setTimeout(() => {
+        if (typeof Auth !== 'undefined' && Auth.currentUser) {
+          window.CloudDB.syncToCloud();
+        }
+      }, 2000);
+    };
+
     DB.save = function() {
       originalSave();
-      // Only sync if user is logged in
-      if (typeof Auth !== 'undefined' && Auth.currentUser) {
-        window.CloudDB.syncToCloud();
-      }
+      _debouncedSync();
     };
-    console.log('✅ CloudDB: Interceptor de DB.save() instalado.');
+    console.log('✅ CloudDB: Interceptor de DB.save() instalado (con debounce 2s).');
   } else {
     console.warn('⚠️ CloudDB: DB no disponible al intentar instalar interceptor.');
   }
 });
+

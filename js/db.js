@@ -4,6 +4,7 @@
    ========================================= */
 const DB = {
   _store: {},
+  _statsCache: {}, // cache de stats por groupId → { players, pairs, ts }
 
   init() {
     try {
@@ -58,6 +59,12 @@ const DB = {
 
   save() {
     localStorage.setItem('dominostats_db', JSON.stringify(this._store));
+  },
+
+  // Invalida el caché de stats para un grupo (o todos si no se especifica)
+  _invalidateStatsCache(groupId) {
+    if (groupId) delete this._statsCache[groupId];
+    else this._statsCache = {};
   },
 
   _seedData() {
@@ -175,18 +182,25 @@ const DB = {
   addMatch(match) {
     match.id = this._uuid(); match.createdAt = new Date().toISOString();
     this._store.matches.push(match); this.save();
+    this._invalidateStatsCache(match.groupId);
     this.addLog({ action: 'match_created', desc: `Nueva partida ${match.type}` });
     this.addNotification({ title: 'Partida registrada', desc: `${match.type === 'tournament' ? 'Torneo' : 'Amistoso'} — ${match.score.team1}:${match.score.team2}`, type: 'match' });
     return match;
   },
   updateMatch(id, data) {
     const idx = this._store.matches.findIndex(m => m.id === id);
-    if (idx >= 0) { this._store.matches[idx] = {...this._store.matches[idx], ...data}; this.save(); }
+    if (idx >= 0) {
+      this._store.matches[idx] = {...this._store.matches[idx], ...data};
+      this._invalidateStatsCache(this._store.matches[idx].groupId);
+      this.save();
+    }
   },
   deleteMatch(id) {
+    const match = this._store.matches.find(m => m.id === id);
     this._store.matches = this._store.matches.filter(m => m.id !== id);
     if (!this._store.deletedMatchIds) this._store.deletedMatchIds = [];
     this._store.deletedMatchIds.push(id);
+    if (match) this._invalidateStatsCache(match.groupId);
     this.save();
     this.addLog({ action: 'match_deleted', desc: `Partida eliminada: ${id}` });
   },
@@ -240,11 +254,93 @@ const DB = {
   },
 
   getAllPlayerStats(groupId) {
+    // ── Caché: devolver resultado previo si no ha cambiado ──
+    const cached = this._statsCache[groupId];
+    if (cached) return cached;
+
+    // ── Single-pass O(matches): computar stats de TODOS los jugadores en una sola iteración ──
     const players = this.getPlayers(groupId);
-    return players.map(p => ({
-      ...p,
-      stats: this.getPlayerStats(p.id, groupId)
-    })).sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
+    if (!players.length) return [];
+
+    // Inicializar acumuladores por playerId
+    const acc = {};
+    players.forEach(p => {
+      acc[p.id] = {
+        wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0,
+        shoesGiven: 0, shoesReceived: 0, played: 0,
+        history: [] // [true=win, false=loss] en orden cronológico
+      };
+    });
+
+    // Una sola pasada por las partidas (ordenadas cronológicamente)
+    const matches = this.getMatches(groupId);
+    const chronological = [...matches].reverse(); // getMatches devuelve desc
+    for (const m of chronological) {
+      const processTeam = (myTeamKey, oppTeamKey) => {
+        const p1id = m[myTeamKey].player1;
+        const p2id = m[myTeamKey].player2;
+        const won  = m.winner === myTeamKey;
+        const ptsFor  = m.score[myTeamKey]  || 0;
+        const ptsAga  = m.score[oppTeamKey] || 0;
+        const shoesGiven = m.shoes?.[`${myTeamKey}Given`]  || 0;
+        const shoesRecv  = m.shoes?.[`${oppTeamKey}Given`] || 0;
+
+        [p1id, p2id].forEach(pid => {
+          if (!pid || !acc[pid]) return;
+          const a = acc[pid];
+          a.played++;
+          if (won) a.wins++; else a.losses++;
+          a.pointsFor     += ptsFor;
+          a.pointsAgainst += ptsAga;
+          a.shoesGiven    += shoesGiven;
+          a.shoesReceived += shoesRecv;
+          a.history.push(won);
+        });
+      };
+      processTeam('team1', 'team2');
+      processTeam('team2', 'team1');
+    }
+
+    // Calcular métricas derivadas (eff, rachas) para cada jugador
+    const result = players.map(p => {
+      const a = acc[p.id];
+      const eff = a.played > 0 ? parseFloat(((a.wins / a.played) * 100).toFixed(1)) : 0;
+      const pointDiff = a.pointsFor - a.pointsAgainst;
+
+      // Racha actual (desde el final de history)
+      let currentStreak = 0, currentStreakType = null;
+      for (let i = a.history.length - 1; i >= 0; i--) {
+        const won = a.history[i];
+        if (currentStreakType === null) { currentStreakType = won ? 'win' : 'loss'; currentStreak = 1; }
+        else if ((won && currentStreakType === 'win') || (!won && currentStreakType === 'loss')) currentStreak++;
+        else break;
+      }
+
+      // Racha máxima
+      let maxWinStreak = 0, maxLossStreak = 0, tempStreak = 0, tempType = null;
+      for (const won of a.history) {
+        if (tempType === null) { tempType = won ? 'win' : 'loss'; tempStreak = 1; }
+        else if ((won && tempType === 'win') || (!won && tempType === 'loss')) tempStreak++;
+        else { tempType = won ? 'win' : 'loss'; tempStreak = 1; }
+        if (tempType === 'win') maxWinStreak = Math.max(maxWinStreak, tempStreak);
+        else maxLossStreak = Math.max(maxLossStreak, tempStreak);
+      }
+
+      return {
+        ...p,
+        stats: {
+          playerId: p.id,
+          played: a.played, wins: a.wins, losses: a.losses,
+          pointsFor: a.pointsFor, pointsAgainst: a.pointsAgainst, pointDiff,
+          shoesGiven: a.shoesGiven, shoesReceived: a.shoesReceived,
+          eff, currentStreak, currentStreakType, maxWinStreak, maxLossStreak
+        }
+      };
+    }).sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
+
+    // Guardar en caché
+    this._statsCache[groupId] = result;
+    return result;
   },
 
   getPairStats(player1Id, player2Id, groupId) {
@@ -281,28 +377,26 @@ const DB = {
   },
 
   getBestPairs(groupId) {
+    // Usar caché de parejas si existe
+    const cacheKey = `pairs_${groupId}`;
+    if (this._statsCache[cacheKey]) return this._statsCache[cacheKey];
+
     const matches = this.getMatches(groupId);
-    const pairsMap = {}; // key: "id1|id2" (sorted)
-    
+    const pairsMap = {};
+
     matches.forEach(m => {
-      // Process Team 1
-      if (m.team1.player1 && m.team1.player2) {
-        const ids = [m.team1.player1, m.team1.player2].sort();
-        const key = ids.join('|');
+      const processPair = (teamKey, winnerKey) => {
+        const a = m[teamKey].player1;
+        const b = m[teamKey].player2;
+        if (!a || !b) return;
+        const key = [a, b].sort().join('|');
         if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0 };
         pairsMap[key].played++;
-        if (m.winner === 'team1') pairsMap[key].wins++;
+        if (m.winner === winnerKey) pairsMap[key].wins++;
         else pairsMap[key].losses++;
-      }
-      // Process Team 2
-      if (m.team2.player1 && m.team2.player2) {
-        const ids = [m.team2.player1, m.team2.player2].sort();
-        const key = ids.join('|');
-        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0 };
-        pairsMap[key].played++;
-        if (m.winner === 'team2') pairsMap[key].wins++;
-        else pairsMap[key].losses++;
-      }
+      };
+      processPair('team1', 'team1');
+      processPair('team2', 'team2');
     });
 
     const result = [];
@@ -311,14 +405,13 @@ const DB = {
       const p1 = this.getPlayerById(id1);
       const p2 = this.getPlayerById(id2);
       if (p1 && p2) {
-        const eff = stats.played > 0 ? ((stats.wins / stats.played) * 100).toFixed(1) : 0;
-        stats.eff = parseFloat(eff);
+        stats.eff = stats.played > 0 ? parseFloat(((stats.wins / stats.played) * 100).toFixed(1)) : 0;
         result.push({ p1, p2, stats });
       }
     }
-    
-    // Sort by eff desc, then wins desc
-    return result.sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
+    const sorted = result.sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
+    this._statsCache[cacheKey] = sorted;
+    return sorted;
   },
 
   getMatchesForPlayer(playerId, groupId) {
@@ -328,23 +421,27 @@ const DB = {
     );
   },
 
-  // Predict match outcome
+  // Predict match outcome — usa stats cacheadas cuando están disponibles
   predictMatch(team1PlayerIds, team2PlayerIds, groupId) {
-    const t1 = team1PlayerIds.map(id => this.getPlayerStats(id, groupId));
-    const t2 = team2PlayerIds.map(id => this.getPlayerStats(id, groupId));
+    // Intentar obtener desde el single-pass cache
+    const allStats = this.getAllPlayerStats(groupId);
+    const statsMap = {};
+    allStats.forEach(ps => { statsMap[ps.id] = ps.stats; });
+
+    const getStat = (id) => statsMap[id] || this.getPlayerStats(id, groupId);
+    const t1 = team1PlayerIds.map(getStat);
+    const t2 = team2PlayerIds.map(getStat);
 
     const t1Eff = (t1[0].eff + (t1[1] ? t1[1].eff : 50)) / (t1[1] ? 2 : 1);
     const t2Eff = (t2[0].eff + (t2[1] ? t2[1].eff : 50)) / (t2[1] ? 2 : 1);
 
-    // Adjust by pair synergy
     const pairStat1 = t1.length === 2 ? this.getPairStats(team1PlayerIds[0], team1PlayerIds[1], groupId) : null;
     const pairStat2 = t2.length === 2 ? this.getPairStats(team2PlayerIds[0], team2PlayerIds[1], groupId) : null;
     const p1Bonus = pairStat1 && pairStat1.played > 3 ? (pairStat1.eff - 50) * 0.2 : 0;
     const p2Bonus = pairStat2 && pairStat2.played > 3 ? (pairStat2.eff - 50) * 0.2 : 0;
 
-    // Recent form bonus
-    const t1RecentBonus = t1[0].currentStreakType === 'win' ? t1[0].currentStreak * 1.5 : -t1[0].currentStreak * 1;
-    const t2RecentBonus = t2[0].currentStreakType === 'win' ? t2[0].currentStreak * 1.5 : -t2[0].currentStreak * 1;
+    const t1RecentBonus = t1[0].currentStreakType === 'win' ? t1[0].currentStreak * 1.5 : -(t1[0].currentStreak || 0);
+    const t2RecentBonus = t2[0].currentStreakType === 'win' ? t2[0].currentStreak * 1.5 : -(t2[0].currentStreak || 0);
 
     const score1 = t1Eff + p1Bonus + t1RecentBonus;
     const score2 = t2Eff + p2Bonus + t2RecentBonus;
@@ -352,20 +449,6 @@ const DB = {
     const t1Prob = total > 0 ? (score1 / total * 100) : 50;
 
     return { team1Prob: Math.min(95, Math.max(5, t1Prob)).toFixed(1), team2Prob: (100 - t1Prob).toFixed(1) };
-  },
-
-  getBestPairs(groupId) {
-    const players = this.getPlayers(groupId);
-    const pairs = [];
-    for (let i = 0; i < players.length; i++) {
-      for (let j = i + 1; j < players.length; j++) {
-        const stats = this.getPairStats(players[i].id, players[j].id, groupId);
-        if (stats.played > 0) {
-          pairs.push({ p1: players[i], p2: players[j], stats });
-        }
-      }
-    }
-    return pairs.sort((a, b) => b.stats.eff - a.stats.eff || b.stats.played - a.stats.played);
   },
 
   getMonthlyStats(groupId) {

@@ -186,7 +186,19 @@ const ImportPage = {
   importPlayers() {
     if (!this._parsedPlayers) return;
     const groupId = Auth.getGroupId();
+
+    // ── Batch mode: suspend per-save syncs ──────────────────
+    const originalSave = DB.save.bind(DB);
+    DB.save = () => {}; // no-op durante el batch
+
     const imported = DB.importPlayers(this._parsedPlayers, groupId);
+
+    // Restaurar y guardar una sola vez
+    DB.save = originalSave;
+    DB.save();
+    if (typeof CloudDB !== 'undefined') CloudDB.syncToCloud();
+    // ────────────────────────────────────────────────────────
+
     Toast.success(`✅ ${imported.length} jugadores importados correctamente`);
     this.clearPreview('players');
   },
@@ -197,12 +209,22 @@ const ImportPage = {
     const players = DB.getPlayers(groupId);
     let success = 0, errors = 0;
 
+    // ── Batch mode: suspender saves/syncs durante la importación ──
+    const originalSave = DB.save.bind(DB);
+    DB.save = () => {}; // no-op durante el batch
+
+    // Pre-construir mapa nombre/alias → jugador para lookup O(1)
+    const playerMap = {};
+    players.forEach(p => {
+      playerMap[p.name.toLowerCase().trim()] = p;
+      const aliases = Array.isArray(p.aliases)
+        ? p.aliases
+        : (p.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+      aliases.forEach(a => { if (a) playerMap[a.toLowerCase()] = p; });
+    });
+    const findPlayer = (name) => name ? (playerMap[String(name).toLowerCase().trim()] || null) : null;
+
     for (const row of this._parsedMatches) {
-      const findPlayer = (name) => {
-        if (!name) return null;
-        const n = name.toLowerCase().trim();
-        return players.find(p => p.name.toLowerCase() === n || (p.alias||'').toLowerCase() === n);
-      };
       const p1 = findPlayer(row.jugador1 || row.j1 || row['jugador 1']);
       const p2 = findPlayer(row.jugador2 || row.j2 || row['jugador 2']);
       const p3 = findPlayer(row.jugador3 || row.j3 || row['jugador 3']);
@@ -214,20 +236,32 @@ const ImportPage = {
 
       if (!p1 || !p2 || !p3 || !p4 || isNaN(s1) || isNaN(s2) || s1 === s2) { errors++; continue; }
 
-      DB.addMatch({
+      // Push directo al store — sin notificaciones ni logs para no saturar
+      DB._store.matches.push({
+        id: DB._uuid(),
+        createdAt: new Date().toISOString(),
         groupId, type, date,
         team1: { player1: p1.id, player2: p2.id },
         team2: { player1: p3.id, player2: p4.id },
         score: { team1: s1, team2: s2 },
         winner: s1 > s2 ? 'team1' : 'team2',
-        shoes: { team1Given: 0, team2Given: 0 }, notes: ''
+        shoes: { team1Given: 0, team2Given: 0 },
+        notes: ''
       });
       success++;
     }
+
+    // Restaurar, persistir y sincronizar UNA sola vez al final
+    DB.save = originalSave;
+    DB.save();
+    if (typeof CloudDB !== 'undefined') CloudDB.syncToCloud();
+    // ─────────────────────────────────────────────────────────────
+
     if (success > 0) Toast.success(`✅ ${success} partidas importadas`);
-    if (errors > 0) Toast.warning(`⚠️ ${errors} filas con errores omitidas`);
+    if (errors > 0)  Toast.warning(`⚠️ ${errors} filas con errores omitidas`);
     this.clearPreview('matches');
   },
+
 
   downloadTemplate(type) {
     const templates = {
