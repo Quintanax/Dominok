@@ -1,0 +1,44 @@
+{
+  "name": "DominoStats Pro",
+  "short_name": "DominoStats",
+  "description": "Plataforma competitiva para gestión de partidas, jugadores y estadísticas de dominó.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f1a",
+  "theme_color": "#7c3aed",
+  "lang": "es",
+  "categories": ["sports", "games", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nuevo Partido",
+      "short_name": "Partido",
+      "description": "Registrar un nuevo partido rápidamente",
+      "url": "/?page=matches",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Rankings",
+      "short_name": "Rankings",
+      "description": "Ver el ranking de jugadores",
+      "url": "/?page=rankings",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

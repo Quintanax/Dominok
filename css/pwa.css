@@ -1,0 +1,160 @@
+/* ============================================================
+   DominoStats Pro — PWA UI Styles
+   Banner de instalación, indicador offline, badge de update
+   ============================================================ */
+
+/* ── Banner base (instalación + actualización) ───────────── */
+#pwa-install-banner,
+#pwa-update-banner {
+  position: fixed;
+  bottom: -120px; /* oculto inicialmente */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 24px));
+  background: linear-gradient(135deg, rgba(15, 15, 26, 0.97) 0%, rgba(30, 20, 50, 0.97) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(124, 58, 237, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 99999;
+  transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#pwa-install-banner.pwa-banner-visible,
+#pwa-update-banner.pwa-banner-visible {
+  bottom: 24px;
+}
+
+/* En móvil, anclar al fondo completo */
+@media (max-width: 520px) {
+  #pwa-install-banner,
+  #pwa-update-banner {
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    left: 0;
+    transform: none;
+    bottom: -160px;
+  }
+
+  #pwa-install-banner.pwa-banner-visible,
+  #pwa-update-banner.pwa-banner-visible {
+    bottom: 0;
+  }
+}
+
+/* ── Layout interno del banner ───────────────────────────── */
+.pwa-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pwa-banner-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.7));
+}
+
+.pwa-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pwa-banner-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-banner-text span {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Botones del banner ──────────────────────────────────── */
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-btn-install {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.pwa-btn-install:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+}
+
+.pwa-btn-install:active {
+  transform: translateY(0);
+}
+
+.pwa-btn-dismiss {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(148, 163, 184, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.pwa-btn-dismiss:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+/* ── Indicador Offline ───────────────────────────────────── */
+#pwa-offline-indicator {
+  position: fixed;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  padding: 8px 20px;
+  border-radius: 0 0 12px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 99998;
+  transition: top 0.35s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.02em;
+}
+
+#pwa-offline-indicator.pwa-offline-visible {
+  top: 0;
+}

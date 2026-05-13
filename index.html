@@ -5,6 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DominoStats Pro | Sistema de Gestión</title>
   <meta name="description" content="Plataforma SaaS profesional para gestión de partidas, jugadores y estadísticas avanzadas de dominó y juegos en equipo." />
+
+  <!-- ═══════════════════════════════════════════════
+       PWA — Web App Manifest & Meta Tags
+  ═══════════════════════════════════════════════ -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Theme color (barra del navegador en Android) -->
+  <meta name="theme-color" content="#7c3aed" />
+
+  <!-- Habilita modo standalone en iOS (Add to Home Screen) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DominoStats" />
+
+  <!-- Íconos para iOS (Apple no usa el manifest) -->
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+
+  <!-- Ícono estándar (favicon) -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+
+  <!-- Microsoft Tiles (Windows Phone / Edge) -->
+  <meta name="msapplication-TileColor" content="#0f0f1a" />
+  <meta name="msapplication-TileImage" content="/icons/icon-192x192.png" />
+
+  <!-- Open Graph (compartir en redes sociales) -->
+  <meta property="og:title" content="DominoStats Pro" />
+  <meta property="og:description" content="Plataforma competitiva de dominó: estadísticas, rankings y torneos." />
+  <meta property="og:image" content="/icons/icon-512x512.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- ═══════════════════════════════════════════════ -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/variables.css" />
@@ -17,8 +50,8 @@
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/ocr.css" />
   <link rel="stylesheet" href="css/rankings.css" />
+  <link rel="stylesheet" href="css/pwa.css" />
 
-  
   <!-- Firebase Compat SDK (v8 API — works as regular script, no modules needed) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -206,5 +239,11 @@
   <script src="js/pages/global_tournament.js"></script>
   <script src="js/firebase_manager.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- ═══════════════════════════════════════════════
+       PWA — Service Worker + Banner de instalación
+  ═══════════════════════════════════════════════ -->
+  <script src="js/pwa.js"></script>
+
 </body>
 </html>
