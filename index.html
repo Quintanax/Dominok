@@ -32,9 +32,12 @@
     </div>
     <div class="auth-container">
       <div class="auth-brand">
-        <div class="brand-icon">🁣</div>
+        <div class="brand-icon">
+          <span>🁣</span>
+          <span>🁢</span>
+        </div>
         <h1 class="brand-name">DominoStats <span class="brand-pro">Pro</span></h1>
-        <p class="brand-tagline">Plataforma SaaS de Gestión Competitiva</p>
+        <div class="brand-tagline">PLATAFORMA COMPETITIVA</div>
       </div>
       <div class="auth-card" id="auth-card">
         <div class="auth-tabs">
@@ -55,15 +58,7 @@
             </div>
           </div>
           <button type="submit" class="btn btn-primary btn-full">Entrar</button>
-          <p class="auth-demo-hint">
-            <button type="button" class="btn-link" onclick="document.getElementById('login-email').value='admin@demo.com';document.getElementById('login-password').value='admin123';" style="color:var(--accent-primary); font-weight:700;">
-              ✨ Auto-completar Demo
-            </button>
-            <br>
-            <span style="opacity:0.7">Admin: admin@demo.com / admin123</span>
-            <br>
-            <a href="#" onclick="if(typeof DB!=='undefined'){DB.resetDemo();}localStorage.removeItem('dominostats_db');location.reload();" style="font-size: 0.7rem; opacity: 0.6; color: inherit; text-decoration: underline;">Restablecer si el demo no funciona</a>
-          </p>
+
         </form>
         <!-- Register Form -->
         <form id="register-form" class="auth-form hidden" onsubmit="App.handleRegister(event)">
