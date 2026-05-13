@@ -93,6 +93,16 @@ const ImportPage = {
           </div>
         </div>
       </div>
+
+      <!-- Reparar Zapatos -->
+      <div class="card" style="margin-top:12px;border-color:rgba(245,158,11,0.3)">
+        <div class="card-title" style="margin-bottom:6px">👟 Reparar Zapatos</div>
+        <div class="text-xs text-muted" style="margin-bottom:14px">
+          Si importaste partidas sin zapatos detectados, este botón los recalcula automáticamente
+          según la regla: <b>perder con 0 puntos = zapato propinado al perdedor</b>.
+        </div>
+        <button class="btn btn-warning btn-sm" onclick="ImportPage.repairShoes()">🔧 Recalcular zapatos en partidas existentes</button>
+      </div>
     </div>`;
   },
 
@@ -236,6 +246,12 @@ const ImportPage = {
 
       if (!p1 || !p2 || !p3 || !p4 || isNaN(s1) || isNaN(s2) || s1 === s2) { errors++; continue; }
 
+      // Detectar zapatos: perder con 0 puntos = zapato recibido
+      // team1Given: team1 propinó zapato a team2 (team2 quedó en 0)
+      // team2Given: team2 propinó zapato a team1 (team1 quedó en 0)
+      const t1Given = (s1 > 0 && s2 === 0) ? 1 : 0;
+      const t2Given = (s2 > 0 && s1 === 0) ? 1 : 0;
+
       // Push directo al store — sin notificaciones ni logs para no saturar
       DB._store.matches.push({
         id: DB._uuid(),
@@ -245,7 +261,7 @@ const ImportPage = {
         team2: { player1: p3.id, player2: p4.id },
         score: { team1: s1, team2: s2 },
         winner: s1 > s2 ? 'team1' : 'team2',
-        shoes: { team1Given: 0, team2Given: 0 },
+        shoes: { team1Given: t1Given, team2Given: t2Given },
         notes: ''
       });
       success++;
@@ -297,5 +313,47 @@ const ImportPage = {
       };
       reader.readAsText(file);
     });
+  },
+
+  // ── Reparar zapatos en partidas ya importadas ─────────────────────
+  // Recorre todas las partidas del grupo y asigna zapatos donde
+  // el perdedor quedó en 0 puntos (regla oficial de dominó).
+  repairShoes() {
+    const groupId = Auth.getGroupId();
+    const matches = DB._store.matches.filter(m => m.groupId === groupId);
+    let fixed = 0;
+
+    // Batch: no persistir en cada iteración
+    const originalSave = DB.save.bind(DB);
+    DB.save = () => {};
+
+    matches.forEach(m => {
+      const s1 = m.score?.team1 ?? -1;
+      const s2 = m.score?.team2 ?? -1;
+      if (s1 < 0 || s2 < 0) return;
+
+      // team1Given = team1 propinó zapato (team2 quedó en 0)
+      // team2Given = team2 propinó zapato (team1 quedó en 0)
+      const t1Given = (s1 > 0 && s2 === 0) ? 1 : 0;
+      const t2Given = (s2 > 0 && s1 === 0) ? 1 : 0;
+      const curT1 = m.shoes?.team1Given ?? 0;
+      const curT2 = m.shoes?.team2Given ?? 0;
+
+      if (curT1 !== t1Given || curT2 !== t2Given) {
+        m.shoes = { team1Given: t1Given, team2Given: t2Given };
+        fixed++;
+      }
+    });
+
+    // Restaurar y guardar una sola vez
+    DB.save = originalSave;
+    if (fixed > 0) {
+      DB._invalidateStatsCache(groupId);
+      DB.save();
+      if (typeof CloudDB !== 'undefined') CloudDB.syncToCloud();
+      Toast.success(`👟 ${fixed} partidas corregidas con zapatos recalculados`);
+    } else {
+      Toast.success('✅ Todas las partidas ya tienen los zapatos correctos');
+    }
   }
 };
