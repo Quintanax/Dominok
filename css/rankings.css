@@ -103,10 +103,11 @@
 
 .rk-stats-inline {
   display: flex; gap: 8px; flex-shrink: 0;
+  justify-content: flex-end;
 }
 .rk-stat {
   display: flex; flex-direction: column; align-items: center;
-  gap: 0; min-width: 28px;
+  gap: 0; width: 45px;
 }
 .rk-stat b { font-size: 0.9rem; font-weight: 800; line-height: 1.1; }
 .rk-stat small { font-size: 0.6rem; color: var(--text-muted); line-height: 1; }
@@ -183,8 +184,8 @@
 
 @media (max-width: 400px) {
   /* Hide D on very small screens if needed */
-  .rk-stats-inline { gap: 5px; }
-  .rk-stat { min-width: 24px; }
+  .rk-stats-inline { gap: 2px; }
+  .rk-stat { width: 34px; }
   .rk-eff-bar { width: 36px; }
 }
 
