@@ -2,7 +2,7 @@
    RANKINGS PAGE — Redesigned v2
    ========================================= */
 const RankingsPage = {
-  state: { tab: 'players', sort: 'eff', dir: 'desc', expanded: null },
+  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null },
 
   render() {
     return `
@@ -13,11 +13,12 @@ const RankingsPage = {
           <div class="page-header-sub">Tabla de posiciones</div>
         </div>
         <div class="page-header-actions" style="gap:6px">
+          ${Auth.isAdmin() ? `
           <div class="rk-tabs">
-            <button class="rk-tab active" id="tab-players" onclick="RankingsPage.setTab('players',this)">👤 Jugadores</button>
-            <button class="rk-tab" id="tab-pairs" onclick="RankingsPage.setTab('pairs',this)">👥 Parejas</button>
-            ${Auth.isAdmin() ? `<button class="rk-tab" id="tab-global" onclick="RankingsPage.setTab('global',this)">🌍 Global</button>` : ''}
+            <button class="rk-tab active" id="tab-local" onclick="RankingsPage.setTab('local',this)">🏠 Grupo</button>
+            <button class="rk-tab" id="tab-global" onclick="RankingsPage.setTab('global',this)">🌍 Global</button>
           </div>
+          ` : ''}
           <button class="btn btn-ghost btn-sm" onclick="RankingsPage.exportRankings()" title="Exportar">⬇</button>
         </div>
       </div>
@@ -38,9 +39,22 @@ const RankingsPage = {
   renderTab() {
     const el = document.getElementById('rankings-content');
     if (!el) return;
-    if (this.state.tab === 'players') el.innerHTML = this._renderPlayers();
-    else if (this.state.tab === 'pairs') el.innerHTML = this._renderPairs();
-    else el.innerHTML = this._renderGlobal();
+    if (this.state.tab === 'local') {
+      el.innerHTML = `
+        <div class="rk-split-view">
+          <div class="rk-split-col">
+            <h3 class="rk-split-title">👤 Individual</h3>
+            ${this._renderPlayers()}
+          </div>
+          <div class="rk-split-col">
+            <h3 class="rk-split-title">👥 Parejas</h3>
+            ${this._renderPairs()}
+          </div>
+        </div>
+      `;
+    } else {
+      el.innerHTML = this._renderGlobal();
+    }
   },
 
   toggleExpand(id) {

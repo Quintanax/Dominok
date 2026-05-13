@@ -66,6 +66,27 @@
   color: var(--accent-primary);
 }
 
+/* ── Split View (Desktop Side-by-Side) ──── */
+.rk-split-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.rk-split-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 8px;
+}
+@media (max-width: 1024px) {
+  .rk-split-view {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
 /* ── List ────────────────────────────────── */
 .rk-list { display: flex; flex-direction: column; gap: 6px; }
 
