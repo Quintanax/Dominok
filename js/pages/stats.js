@@ -86,14 +86,16 @@ const StatsPage = {
         /* Layout: stack vertically, no horizontal overflow */
         .stats-layout {
           flex-direction: column; gap: 10px; min-height: unset;
-          overflow-x: hidden; max-width: 100%;
+          overflow-x: hidden; width: 100%; min-width: 0;
         }
         .stats-sidebar { display: none; }
-        .stats-main { overflow-x: hidden; max-width: 100%; }
+        .stats-main { 
+          overflow-x: hidden; width: 100%; min-width: 0; 
+        }
 
         /* Mobile pill nav */
         .stats-mobile-nav {
-          display: block;
+          display: block; width: 100%; min-width: 0; box-sizing: border-box;
           background: var(--bg-card);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-lg);
@@ -121,13 +123,23 @@ const StatsPage = {
         }
 
         /* Force ALL content to stay within screen */
-        .stat-card { padding: 12px; overflow: hidden; box-sizing: border-box; }
-        .stat-card h3 { font-size: 1rem; margin-bottom: 4px; }
-        .stat-card p { font-size: 0.8rem; margin-bottom: 10px; }
+        .stat-card { 
+          padding: 12px; overflow: hidden; box-sizing: border-box; 
+          width: 100%; min-width: 0; max-width: 100%;
+        }
+        .stat-card h3 { 
+          font-size: 1rem; margin-bottom: 4px; 
+          white-space: normal; word-break: break-word;
+        }
+        .stat-card p { 
+          font-size: 0.8rem; margin-bottom: 10px; 
+          white-space: normal; word-break: break-word;
+        }
 
         /* Force ALL inline grids (1fr 1fr, repeat(2,1fr), repeat(3,1fr)) to single column */
         .stats-main [style*="grid-template-columns"] {
           grid-template-columns: 1fr !important;
+          width: 100% !important; min-width: 0 !important;
         }
 
         /* Selects and form elements: full width */
