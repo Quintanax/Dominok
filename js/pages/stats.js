@@ -17,33 +17,110 @@ const StatsPage = {
 
   render() {
     return `
-    <div class="page-enter" style="display:flex;gap:16px;min-height:80vh">
-      <aside style="width:240px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:12px;overflow-y:auto">
-        <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);padding:8px 12px 12px;font-weight:700">📊 Analíticas</div>
+    <div class="page-enter stats-layout">
+      <!-- MOBILE: compact horizontal pill nav -->
+      <div class="stats-mobile-nav">
+        <div class="stats-pills" id="stats-pills">
+          ${this._tabs.map(([id,icon,text,stars])=>
+            `<button class="stats-pill ${this.state.tab===id?'active':''}" data-tab="${id}" onclick="StatsPage.go('${id}')">${icon} ${text}</button>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- DESKTOP: sidebar -->
+      <aside class="stats-sidebar">
+        <div class="stats-sidebar-label">📊 Analíticas</div>
         <nav id="stats-nav" style="display:flex;flex-direction:column;gap:2px">
           ${this._tabs.map(([id,icon,text,stars])=>this._nav(id,icon,text,stars)).join('')}
         </nav>
       </aside>
-      <main style="flex:1;min-width:0" id="stats-content"></main>
+
+      <main class="stats-main" id="stats-content"></main>
     </div>
     <style>
-      .snav { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);border:none;background:transparent;color:var(--text-secondary);font-size:0.88rem;font-weight:600;text-align:left;cursor:pointer;transition:all .15s;width:100% }
+      /* ── Stats Layout ─────────────────────── */
+      .stats-layout {
+        display: flex; gap: 16px; min-height: 80vh;
+      }
+      .stats-sidebar {
+        width: 220px; flex-shrink: 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 12px;
+        overflow-y: auto;
+        max-height: 80vh;
+        position: sticky; top: 12px;
+      }
+      .stats-sidebar-label {
+        font-size: 0.68rem; text-transform: uppercase;
+        letter-spacing: 1.5px; color: var(--text-muted);
+        padding: 4px 12px 10px; font-weight: 700;
+      }
+      .stats-main { flex: 1; min-width: 0; }
+      .stats-mobile-nav { display: none; }
+
+      /* ── Desktop nav items ───────────────── */
+      .snav { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);border:none;background:transparent;color:var(--text-secondary);font-size:0.85rem;font-weight:600;text-align:left;cursor:pointer;transition:all .15s;width:100% }
       .snav:hover { background:var(--bg-elevated);color:var(--text-primary) }
       .snav.active { background:rgba(108,99,255,.15);color:var(--accent-primary);border-left:3px solid var(--accent-primary) }
-      .snav .star { font-size:0.6rem;opacity:0.5;margin-left:auto }
+      .snav .star { font-size:0.6rem;opacity:0.45;margin-left:auto;white-space:nowrap }
+
+      /* ── Stat content cards ──────────────── */
       .stat-card { background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px }
-      .big-score { font-size:3rem;font-weight:900;line-height:1 }
-      .vs-hero { display:flex;align-items:center;justify-content:center;gap:24px;padding:24px 16px }
-      .vs-side { text-align:center;flex:1 }
-      .vs-mid { color:var(--text-muted);font-weight:900;font-size:1.1rem;text-align:center;flex-shrink:0 }
+      .big-score { font-size:2.6rem;font-weight:900;line-height:1 }
+      .vs-hero { display:flex;align-items:center;justify-content:center;gap:20px;padding:20px 12px }
+      .vs-side { text-align:center;flex:1;min-width:0 }
+      .vs-mid { color:var(--text-muted);font-weight:900;font-size:1rem;text-align:center;flex-shrink:0 }
       .bar-dual { display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--bg-elevated);margin:8px 0 }
       .bar-dual-fill-a { background:var(--accent-primary);transition:width .5s }
       .bar-dual-fill-b { background:var(--accent-danger);flex:1 }
-      .form-dot { width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff }
+      .form-dot { width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#fff }
       .form-dot.w { background:var(--accent-success) }
       .form-dot.l { background:var(--accent-danger) }
-      .nemesis-card { text-align:center;padding:20px 16px }
+      .nemesis-card { text-align:center;padding:16px 12px }
       .timeline-row { border-left:3px solid;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:8px;background:rgba(255,255,255,0.025) }
+
+      /* ── MOBILE ≤768px ───────────────────── */
+      @media (max-width: 768px) {
+        .stats-layout { flex-direction: column; gap: 10px; min-height: unset; }
+        .stats-sidebar { display: none; }
+        .stats-mobile-nav {
+          display: block;
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-lg);
+          padding: 8px;
+        }
+        .stats-pills {
+          display: flex; gap: 5px;
+          overflow-x: auto; padding-bottom: 2px;
+          scrollbar-width: none;
+        }
+        .stats-pills::-webkit-scrollbar { display: none; }
+        .stats-pill {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.75rem; font-weight: 600;
+          background: var(--bg-elevated);
+          color: var(--text-secondary);
+          border: 1px solid var(--border-color);
+          white-space: nowrap; flex-shrink: 0;
+          transition: all 150ms; cursor: pointer;
+        }
+        .stats-pill.active {
+          background: linear-gradient(135deg, #4F46E5, #7C3AED);
+          color: #fff; border-color: transparent;
+          box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+        }
+        /* Compact content on mobile */
+        .stat-card { padding: 12px; }
+        .big-score { font-size: 2rem; }
+        .vs-hero { gap: 10px; padding: 14px 8px; }
+        .vs-hero .avatar-xl { width: 52px !important; height: 52px !important; font-size: 1.1rem !important; }
+        .nemesis-card { padding: 12px 8px; }
+        .nemesis-card .avatar-xl { width: 48px !important; height: 48px !important; font-size: 1rem !important; }
+      }
     </style>`;
   },
 
@@ -57,8 +134,12 @@ const StatsPage = {
 
   go(tab) {
     this.state.tab = tab;
-    // Update nav active states without full page reload
+    // Update desktop nav
     document.querySelectorAll('#stats-nav .snav').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    // Update mobile pills
+    document.querySelectorAll('#stats-pills .stats-pill').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     this.renderTab();
