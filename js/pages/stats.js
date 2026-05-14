@@ -83,14 +83,22 @@ const StatsPage = {
 
       /* ── MOBILE ≤768px ───────────────────── */
       @media (max-width: 768px) {
-        .stats-layout { flex-direction: column; gap: 10px; min-height: unset; }
+        /* Layout: stack vertically, no horizontal overflow */
+        .stats-layout {
+          flex-direction: column; gap: 10px; min-height: unset;
+          overflow-x: hidden; max-width: 100%;
+        }
         .stats-sidebar { display: none; }
+        .stats-main { overflow-x: hidden; max-width: 100%; }
+
+        /* Mobile pill nav */
         .stats-mobile-nav {
           display: block;
           background: var(--bg-card);
           border: 1px solid var(--border-color);
           border-radius: var(--radius-lg);
           padding: 8px;
+          overflow: hidden;
         }
         .stats-pills {
           display: flex; gap: 5px;
@@ -99,11 +107,9 @@ const StatsPage = {
         }
         .stats-pills::-webkit-scrollbar { display: none; }
         .stats-pill {
-          padding: 6px 12px;
-          border-radius: 20px;
+          padding: 6px 12px; border-radius: 20px;
           font-size: 0.75rem; font-weight: 600;
-          background: var(--bg-elevated);
-          color: var(--text-secondary);
+          background: var(--bg-elevated); color: var(--text-secondary);
           border: 1px solid var(--border-color);
           white-space: nowrap; flex-shrink: 0;
           transition: all 150ms; cursor: pointer;
@@ -113,13 +119,50 @@ const StatsPage = {
           color: #fff; border-color: transparent;
           box-shadow: 0 2px 8px rgba(99,102,241,0.35);
         }
-        /* Compact content on mobile */
-        .stat-card { padding: 12px; }
-        .big-score { font-size: 2rem; }
-        .vs-hero { gap: 10px; padding: 14px 8px; }
-        .vs-hero .avatar-xl { width: 52px !important; height: 52px !important; font-size: 1.1rem !important; }
+
+        /* Force ALL content to stay within screen */
+        .stat-card { padding: 12px; overflow: hidden; box-sizing: border-box; }
+        .stat-card h3 { font-size: 1rem; margin-bottom: 4px; }
+        .stat-card p { font-size: 0.8rem; margin-bottom: 10px; }
+
+        /* Force ALL inline grids (1fr 1fr, repeat(2,1fr), repeat(3,1fr)) to single column */
+        .stats-main [style*="grid-template-columns"] {
+          grid-template-columns: 1fr !important;
+        }
+
+        /* Selects and form elements: full width */
+        .stats-main select,
+        .stats-main .form-select,
+        .stats-main .form-group {
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box;
+        }
+
+        /* VS Hero: stack vertically instead of side-by-side */
+        .vs-hero {
+          flex-direction: column; gap: 8px; padding: 12px 8px;
+        }
+        .vs-side { width: 100%; }
+        .vs-mid { padding: 4px 0; }
+        .vs-hero .avatar-xl {
+          width: 52px !important; height: 52px !important;
+          font-size: 1.1rem !important;
+        }
+        .big-score { font-size: 1.8rem; }
+
+        /* Nemesis/Teammate dual cards: stack */
         .nemesis-card { padding: 12px 8px; }
-        .nemesis-card .avatar-xl { width: 48px !important; height: 48px !important; font-size: 1rem !important; }
+        .nemesis-card .avatar-xl {
+          width: 44px !important; height: 44px !important;
+          font-size: 0.95rem !important;
+        }
+
+        /* Form dots (recent form): smaller, wrap */
+        .form-dot { width: 20px; height: 20px; font-size: 0.6rem; }
+
+        /* Tables: allow horizontal scroll inside their own container */
+        .table-wrapper { overflow-x: auto; }
       }
     </style>`;
   },
