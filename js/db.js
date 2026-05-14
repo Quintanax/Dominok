@@ -455,7 +455,11 @@ const DB = {
     const matches = this.getMatches(groupId);
     const months = {};
     for (const m of matches) {
-      const key = m.date.substring(0, 7);
+      if (!m.date) continue;
+      const d = new Date(m.date);
+      if (isNaN(d.getTime())) continue;
+      
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!months[key]) months[key] = { month: key, matches: 0, tournaments: 0, friendly: 0 };
       months[key].matches++;
       if (m.type === 'tournament') months[key].tournaments++;
