@@ -426,9 +426,17 @@ const App = {
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const main = document.getElementById('main-content');
+    const overlay = document.getElementById('sidebar-overlay');
+
     if (window.innerWidth <= 768) {
       this._mobileOpen = !this._mobileOpen;
       sidebar.classList.toggle('mobile-open', this._mobileOpen);
+      if (overlay) {
+        overlay.classList.toggle('active', this._mobileOpen);
+        // Force reflow for opacity transition
+        if (this._mobileOpen) overlay.style.display = 'block';
+        else setTimeout(() => overlay.style.display = 'none', 300);
+      }
     } else {
       this._sidebarCollapsed = !this._sidebarCollapsed;
       sidebar.classList.toggle('collapsed', this._sidebarCollapsed);

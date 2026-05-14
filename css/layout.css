@@ -227,9 +227,25 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%); width: var(--sidebar-width) !important;
-    z-index: 300;
+    z-index: 400; /* Must be above overlay */
+    transition: transform var(--transition-normal);
   }
   .sidebar.mobile-open { transform: translateX(0); }
+  
+  /* Sidebar Overlay Backdrop */
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 350;
+    opacity: 0; transition: opacity var(--transition-normal);
+  }
+  .sidebar-overlay.active {
+    display: block; opacity: 1;
+  }
+
   .main-content { margin-left: 0 !important; }
   .mobile-menu-btn { display: flex; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }

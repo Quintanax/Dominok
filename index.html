@@ -143,13 +143,15 @@
       </div>
     </aside>
 
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
 
     <!-- Main Content -->
     <main class="main-content" id="main-content">
       <!-- Top Bar -->
       <header class="topbar">
         <div class="topbar-left">
-          <button class="mobile-menu-btn" onclick="App.toggleSidebar()">☰</button>
+          <button class="mobile-menu-btn" id="mobile-menu-btn" onclick="App.toggleSidebar()" style="touch-action:manipulation">☰</button>
           <div class="page-breadcrumb">
             <span id="page-title">Dashboard</span>
           </div>
