@@ -66,6 +66,33 @@
   color: var(--accent-primary);
 }
 
+/* ── Mobile Section Toggle (hidden on desktop) ── */
+.rk-mobile-toggle {
+  display: none;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+.rk-mt-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: none;
+  color: var(--text-secondary);
+  transition: all 150ms;
+  white-space: nowrap;
+}
+.rk-mt-btn.active {
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+}
+
 /* ── Split View (Desktop Side-by-Side) ──── */
 .rk-split-view {
   display: grid;
@@ -73,12 +100,16 @@
   gap: 20px;
 }
 .rk-split-title {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   margin-bottom: 12px;
   color: var(--text-primary);
   border-bottom: 2px solid var(--border-color);
   padding-bottom: 8px;
+  display: none; /* hidden on mobile — toggle labels serve as title */
+}
+@media (min-width: 769px) {
+  .rk-split-title { display: block; }
 }
 @media (max-width: 1024px) {
   .rk-split-view {
@@ -185,29 +216,68 @@
 
 /* ── RESPONSIVE ──────────────────────────── */
 @media (max-width: 768px) {
-  /* Podium: 3 cols remain but more compact */
-  .rk-podium { gap: 6px; }
-  .rk-podium-slot { padding: 10px 6px; border-radius: 12px; }
-  .rk-podium-medal { font-size: 1.1rem; margin-bottom: 4px; }
-  .rk-podium-eff { font-size: 0.95rem; }
+  /* Show mobile toggle, hide split titles */
+  .rk-mobile-toggle { display: flex; }
 
-  /* Row: tighter on mobile */
-  .rk-row-main { padding: 10px 10px; gap: 8px; }
+  /* Mobile section visibility */
+  .rk-m-hidden { display: none !important; }
+  .rk-m-active { display: block; }
+
+  /* On mobile, split view is single column */
+  .rk-split-view { gap: 0; }
+
+  /* Podium: keep 3 cols but ultra compact */
+  .rk-podium { gap: 4px; margin-bottom: 12px; }
+  .rk-podium-slot {
+    padding: 8px 4px;
+    border-radius: 10px;
+  }
+  .rk-podium-medal { font-size: 1rem; margin-bottom: 3px; }
+  .rk-podium-eff { font-size: 0.85rem; margin-top: 4px; }
+  .rk-podium-eff span { font-size: 0.55rem; }
+  /* shrink avatar inside podium on mobile */
+  .rk-podium-slot .avatar-md {
+    width: 38px !important; height: 38px !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 5px !important;
+  }
+
+  /* Rows: tighter */
+  .rk-row-main { padding: 9px 10px; gap: 7px; }
   .rk-name { font-size: 0.82rem; }
+
+  /* Stats: narrower */
+  .rk-stats-inline { gap: 4px; }
+  .rk-stat { width: 36px; }
   .rk-stat b { font-size: 0.82rem; }
+  .rk-stat small { font-size: 0.58rem; }
 
-  /* Detail: 2 cols on mobile */
+  /* Hide shoes column on mobile to save space */
+  .rk-stat-shoes { display: none; }
+
+  /* EFF col */
+  .rk-eff-col { min-width: 38px; }
+  .rk-eff-bar { width: 38px; }
+  .rk-eff-val { font-size: 0.75rem; }
+
+  /* Detail: 2 cols */
   .rk-detail-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rk-detail-val { font-size: 0.9rem; }
 
-  /* Tabs: smaller text on mobile */
+  /* Sort bar: smaller */
+  .rk-sort-bar { gap: 4px; }
+  .rk-sort-btn { padding: 3px 9px; font-size: 0.72rem; }
   .rk-tab { padding: 5px 10px; font-size: 0.72rem; }
 }
 
 @media (max-width: 400px) {
-  /* Hide D on very small screens if needed */
   .rk-stats-inline { gap: 2px; }
-  .rk-stat { width: 34px; }
-  .rk-eff-bar { width: 36px; }
+  .rk-stat { width: 30px; }
+  .rk-eff-col { min-width: 32px; }
+  .rk-eff-bar { width: 32px; }
+  .rk-podium-slot .avatar-md {
+    width: 32px !important; height: 32px !important;
+  }
 }
 
 /* =========================================

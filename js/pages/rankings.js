@@ -2,7 +2,7 @@
    RANKINGS PAGE — Redesigned v2
    ========================================= */
 const RankingsPage = {
-  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null },
+  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null, mobileTab: 'individual' },
 
   render() {
     return `
@@ -40,13 +40,18 @@ const RankingsPage = {
     const el = document.getElementById('rankings-content');
     if (!el) return;
     if (this.state.tab === 'local') {
+      const mt = this.state.mobileTab;
       el.innerHTML = `
+        <div class="rk-mobile-toggle">
+          <button class="rk-mt-btn ${mt==='individual'?'active':''}" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
+          <button class="rk-mt-btn ${mt==='pairs'?'active':''}" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
+        </div>
         <div class="rk-split-view">
-          <div class="rk-split-col">
+          <div class="rk-split-col ${mt==='individual'?'rk-m-active':'rk-m-hidden'}">
             <h3 class="rk-split-title">👤 Individual</h3>
             ${this._renderPlayers()}
           </div>
-          <div class="rk-split-col">
+          <div class="rk-split-col ${mt==='pairs'?'rk-m-active':'rk-m-hidden'}">
             <h3 class="rk-split-title">👥 Parejas</h3>
             ${this._renderPairs()}
           </div>
@@ -55,6 +60,12 @@ const RankingsPage = {
     } else {
       el.innerHTML = this._renderGlobal();
     }
+  },
+
+  setMobileTab(tab) {
+    this.state.mobileTab = tab;
+    this.state.expanded = null;
+    this.renderTab();
   },
 
   toggleExpand(id) {
@@ -111,7 +122,7 @@ const RankingsPage = {
         <div class="rk-stats-inline">
           <span class="rk-stat text-success"><b>${st.wins}</b><small>V</small></span>
           <span class="rk-stat text-danger"><b>${st.losses}</b><small>D</small></span>
-          <span class="rk-stat" style="color:var(--accent-warning)"><b>${st.shoesGiven}</b><small>👟</small></span>
+          <span class="rk-stat rk-stat-shoes" style="color:var(--accent-warning)"><b>${st.shoesGiven}</b><small>👟</small></span>
           <span class="rk-stat" style="color:${diffColor}"><b>${Utils.fmtDiff(st.pointDiff)}</b><small>DP</small></span>
         </div>
         <div class="rk-eff-col">
