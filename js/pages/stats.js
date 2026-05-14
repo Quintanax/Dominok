@@ -136,11 +136,7 @@ const StatsPage = {
           white-space: normal; word-break: break-word;
         }
 
-        /* Force ALL inline grids (1fr 1fr, repeat(2,1fr), repeat(3,1fr)) to single column */
-        .stats-main [style*="grid-template-columns"] {
-          grid-template-columns: 1fr !important;
-          width: 100% !important; min-width: 0 !important;
-        }
+
 
         /* Selects and form elements: full width */
         .stats-main select,
@@ -241,7 +237,7 @@ const StatsPage = {
     const f = this._statsByType(playerId, groupId, 'friendly');
     const t = this._statsByType(playerId, groupId, 'tournament');
     return `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+      <div class="grid-2" style="gap:8px;margin-top:10px">
         <div style="background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.25);border-radius:var(--radius-md);padding:10px">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-primary);font-weight:700;margin-bottom:6px">🎮 Amistosos</div>
           <div class="stat-row"><span class="stat-label">Partidas</span><span class="stat-value">${f.played}</span></div>
@@ -268,7 +264,7 @@ const StatsPage = {
       <div class="stat-card">
         <h3 style="margin:0 0 4px">⚔️ VS Directo — Head to Head</h3>
         <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 14px">Historial completo entre dos jugadores, incluyendo forma reciente y diferencial de puntos</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Jugador A</label>
             <select id="h2h-a" class="form-select" onchange="StatsPage._h2hRender()"><option value="">— Seleccionar —</option>${this._pOpts(this.state.p1)}</select>
@@ -339,7 +335,7 @@ const StatsPage = {
           <span>${pct}% dominio</span><span>${(100-pct).toFixed(0)}% dominio</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="grid-2">
         ${[{p:pa,label:'A'},{p:pb,label:'B'}].map(({p})=>{
           const gId2 = Auth.getGroupId();
           const sAll = DB.getPlayerStats(p.id, gId2);
@@ -404,7 +400,7 @@ const StatsPage = {
       </tr>`).join('');
 
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="grid-2" style="margin-bottom:12px">
         <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-danger)">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-danger);font-weight:700;margin-bottom:12px">⚠️ Su Némesis — Le gana seguido</div>
           <div class="avatar avatar-xl" style="margin:0 auto 10px;background:${Utils.avatarColor(nemesis.opp.name)}">${Utils.initials(nemesis.opp.name)}</div>
@@ -483,7 +479,7 @@ const StatsPage = {
     const p2 = DB.getPlayerById(p);
 
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="grid-2" style="margin-bottom:12px">
         <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-success)">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-success);font-weight:700;margin-bottom:10px">🤝 Mejor Compañero</div>
           <div class="avatar avatar-xl" style="margin:0 auto 8px;background:${Utils.avatarColor(DB.getPlayerById(best.id)?.name||'?')}">${Utils.initials(DB.getPlayerById(best.id)?.name||'?')}</div>
@@ -564,7 +560,7 @@ const StatsPage = {
     const gEvo  = Auth.getGroupId();
 
     el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+      <div class="grid-3" style="margin-bottom:12px">
         <div class="stat-card" style="text-align:center">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)">Forma actual</div>
           <div style="font-size:2rem;font-weight:900;color:${last>=50?'var(--accent-success)':'var(--accent-danger)'}">${last}%</div>
@@ -604,7 +600,7 @@ const StatsPage = {
       </div>`;
 
     return `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="grid-2" style="margin-bottom:12px">
         <div class="stat-card">
           <div style="font-weight:700;margin-bottom:12px;color:var(--accent-warning)">🔥 Racha ganadora activa</div>
           ${wins.length ? wins.map(p=>streakRow(p,'win')).join('') : '<div class="text-muted text-sm">Nadie en racha ganadora</div>'}
@@ -641,7 +637,7 @@ const StatsPage = {
     const shoes = matches.filter(m=>m.score.team1===0||m.score.team2===0).length;
     const avgScore = total>0 ? (matches.reduce((s,m)=>s+m.score.team1+m.score.team2,0)/(total*2)).toFixed(1) : 0;
     return `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+      <div class="grid-3" style="margin-bottom:12px">
         <div class="stat-card" style="text-align:center">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)">Total partidas</div>
           <div style="font-size:2rem;font-weight:900">${total}</div>
