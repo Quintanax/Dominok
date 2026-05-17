@@ -14,6 +14,7 @@ const App = {
     get matches() { return typeof MatchesPage !== 'undefined' ? MatchesPage : null },
     get players() { return typeof PlayersPage !== 'undefined' ? PlayersPage : null },
     get rankings() { return typeof RankingsPage !== 'undefined' ? RankingsPage : null },
+    get award_rankings() { return typeof AwardRankingsPage !== 'undefined' ? AwardRankingsPage : null },
     get history() { return typeof HistoryPage !== 'undefined' ? HistoryPage : null },
     get stats() { return typeof StatsPage !== 'undefined' ? StatsPage : null },
     get predictor() { return typeof PredictorPage !== 'undefined' ? PredictorPage : null },
@@ -35,6 +36,7 @@ const App = {
     matches:            '🎮 Partidas',
     players:            '👥 Jugadores',
     rankings:           '🏆 Tabla de Posiciones',
+    award_rankings:     '🥇 Rankings',
     history:            '📚 Historial',
     stats:              '📈 Estadísticas',
     predictor:          '🔮 Predictor',
@@ -171,7 +173,8 @@ const App = {
         </div>
         <div class="nav-section">
           <span class="nav-section-label">Vista de Grupos</span>
-          ${ni('rankings',   '🏆', 'Tabla de Posiciones')}
+          ${ni('rankings',       '🏆', 'Tabla de Posiciones')}
+          ${ni('award_rankings', '🥇', 'Rankings')}
           ${ni('reports',    '📋', 'Reportes')}
           ${ni('import',     '📂', 'Importar datos')}
         </div>`;
@@ -186,7 +189,8 @@ const App = {
         </div>
         <div class="nav-section">
           <span class="nav-section-label">Análisis</span>
-          ${ni('rankings',   '🏆', 'Tabla de Posiciones')}
+          ${ni('rankings',       '🏆', 'Tabla de Posiciones')}
+          ${ni('award_rankings', '🥇', 'Rankings')}
           ${ni('history',    '📚', 'Historial')}
           ${ni('stats',      '📈', 'Estadísticas')}
           ${ni('predictor',  '🔮', 'Predictor')}
