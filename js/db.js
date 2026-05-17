@@ -390,10 +390,11 @@ const DB = {
         const b = m[teamKey].player2;
         if (!a || !b) return;
         const key = [a, b].sort().join('|');
-        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0 };
+        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0, shoesGiven: 0 };
         pairsMap[key].played++;
         if (m.winner === winnerKey) pairsMap[key].wins++;
         else pairsMap[key].losses++;
+        pairsMap[key].shoesGiven += (m.shoes?.[`${teamKey}Given`] || 0);
       };
       processPair('team1', 'team1');
       processPair('team2', 'team2');
