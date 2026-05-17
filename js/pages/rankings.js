@@ -2,7 +2,7 @@
    RANKINGS PAGE — Redesigned v2
    ========================================= */
 const RankingsPage = {
-  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null, mobileTab: 'individual' },
+  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null, mobileTab: 'individual', minPlayed: 0 },
 
   render() {
     return `
@@ -42,9 +42,15 @@ const RankingsPage = {
     if (this.state.tab === 'local') {
       const mt = this.state.mobileTab || 'individual';
       el.innerHTML = `
-        <div style="display:flex;gap:8px;margin-bottom:16px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content">
-          <button class="btn btn-sm ${mt==='individual'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
-          <button class="btn btn-sm ${mt==='pairs'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; align-items:center;">
+          <div style="display:flex;gap:8px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content">
+            <button class="btn btn-sm ${mt==='individual'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
+            <button class="btn btn-sm ${mt==='pairs'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; background:var(--bg-elevated); padding:6px 12px; border-radius:var(--radius-lg);">
+            <span style="font-size:0.85rem; color:var(--text-muted)">Mín. Partidas:</span>
+            <input type="number" min="0" style="width:60px; padding:4px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); text-align:center;" value="${this.state.minPlayed}" onchange="RankingsPage.setMinPlayed(this.value)" onkeyup="if(event.key==='Enter') RankingsPage.setMinPlayed(this.value)">
+          </div>
         </div>
         <div>
           ${mt==='individual' ? this._renderPlayers() : this._renderPairs()}
@@ -61,6 +67,13 @@ const RankingsPage = {
     this.renderTab();
   },
 
+  setMinPlayed(val) {
+    const num = parseInt(val, 10);
+    this.state.minPlayed = isNaN(num) ? 0 : num;
+    this.state.expanded = null;
+    this.renderTab();
+  },
+
   toggleExpand(id) {
     this.state.expanded = this.state.expanded === id ? null : id;
     this.renderTab();
@@ -70,6 +83,9 @@ const RankingsPage = {
   _renderPlayers() {
     const groupId = Auth.getGroupId();
     let allStats = DB.getAllPlayerStats(groupId);
+    if (this.state.minPlayed > 0) {
+      allStats = allStats.filter(p => p.stats.played >= this.state.minPlayed);
+    }
     allStats = Utils.sortArray(allStats, `stats.${this.state.sort}`, this.state.dir);
 
     if (!allStats.length) {
@@ -146,7 +162,8 @@ const RankingsPage = {
   /* ── PAIRS ──────────────────────────────────── */
   _renderPairs() {
     const groupId = Auth.getGroupId();
-    let pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= 1);
+    const minP = this.state.minPlayed > 0 ? this.state.minPlayed : 1;
+    let pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= minP);
     
     // Si el criterio de sort no aplica a parejas (ej: pointDiff), usamos 'wins'
     const validSorts = ['eff', 'wins', 'losses', 'played'];
