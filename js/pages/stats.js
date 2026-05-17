@@ -40,31 +40,28 @@ const StatsPage = {
       /* ── Stats Layout ─────────────────────── */
       .stats-top-nav {
         width: 100%; box-sizing: border-box;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        padding: 8px;
-        overflow: hidden;
+        margin-bottom: 12px;
       }
       .stats-pills {
-        display: flex; gap: 8px;
-        overflow-x: auto; padding-bottom: 2px;
-        scrollbar-width: none;
+        display: flex; gap: 8px; flex-wrap: wrap;
       }
-      .stats-pills::-webkit-scrollbar { display: none; }
       .stats-pill {
-        padding: 8px 16px; border-radius: 20px;
-        font-size: 0.85rem; font-weight: 600;
-        background: var(--bg-elevated); color: var(--text-secondary);
+        padding: 6px 14px; border-radius: 20px;
+        font-size: 0.8rem; font-weight: 600;
+        background: var(--bg-card); color: var(--text-secondary);
         border: 1px solid var(--border-color);
-        white-space: nowrap; flex-shrink: 0;
-        transition: all 150ms; cursor: pointer;
+        transition: all 150ms ease; cursor: pointer;
+        display: flex; align-items: center; gap: 6px;
       }
-      .stats-pill:hover { background: var(--bg-hover); color: var(--text-primary); }
+      .stats-pill:hover { 
+        background: var(--bg-elevated); 
+        color: var(--text-primary); 
+        border-color: rgba(255,255,255,0.2);
+      }
       .stats-pill.active {
-        background: linear-gradient(135deg, #4F46E5, #7C3AED);
-        color: #fff; border-color: transparent;
-        box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+        background: rgba(108, 99, 255, 0.15);
+        color: var(--accent-primary); 
+        border-color: var(--accent-primary);
       }
       .stats-main { width: 100%; min-width: 0; }
 
