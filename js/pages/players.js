@@ -430,8 +430,9 @@ const PlayersPage = {
       }
     });
 
-    // Eliminar el jugador duplicado
+    // Eliminar el jugador duplicado y dejar registro de la fusión
     DB.deletePlayer(removeId);
+    DB.updatePlayer(removeId, { mergedInto: keepId });
     DB._invalidateStatsCache(groupId);
 
     // Forzar sincronización inmediata a la nube para que Firestore

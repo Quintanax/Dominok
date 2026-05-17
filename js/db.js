@@ -67,6 +67,60 @@ const DB = {
     else this._statsCache = {};
   },
 
+  _autoRepairOrphanedMatches() {
+    let orphansRepaired = 0;
+    if (!this._store.matches || !this._store.players) return;
+    
+    this._store.matches.forEach(m => {
+      let changed = false;
+      const checkAndFix = (team, pNum) => {
+        const id = team[`player${pNum}`];
+        if (!id) return;
+        const p = this._store.players.find(x => x.id === id);
+        if (p && !p.active) {
+          // Si sabemos con quién se fusionó
+          if (p.mergedInto) {
+            const keepP = this._store.players.find(x => x.id === p.mergedInto);
+            if (keepP && keepP.active) {
+              team[`player${pNum}`] = keepP.id;
+              changed = true;
+              return;
+            }
+          }
+          // Si no, intentamos emparejar por nombre o alias
+          const name = team[`player${pNum}Name`] || p.name;
+          if (name) {
+            const q = name.trim().toLowerCase();
+            const activePlayers = this._store.players.filter(x => x.active && x.groupId === m.groupId);
+            let newP = activePlayers.find(x => x.name && x.name.trim().toLowerCase() === q);
+            if (!newP) {
+              newP = activePlayers.find(x => {
+                const aliases = Array.isArray(x.aliases) ? x.aliases : (x.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+                return aliases.some(a => a.toLowerCase() === q);
+              });
+            }
+            if (newP) {
+              team[`player${pNum}`] = newP.id;
+              changed = true;
+            }
+          }
+        }
+      };
+      
+      if (m.team1) { checkAndFix(m.team1, 1); checkAndFix(m.team1, 2); }
+      if (m.team2) { checkAndFix(m.team2, 1); checkAndFix(m.team2, 2); }
+      if (changed) orphansRepaired++;
+    });
+    
+    if (orphansRepaired > 0) {
+      console.log(`[DB] Reparadas ${orphansRepaired} partidas huérfanas.`);
+      this._invalidateStatsCache();
+      this.save();
+      // Forzaremos la sincronización desde el llamador si es necesario
+    }
+    return orphansRepaired;
+  },
+
   _seedData() {
     // Blank slate
   },

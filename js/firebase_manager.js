@@ -285,6 +285,10 @@ window.CloudDB = {
 
     const updateLocalAndRefresh = (changed) => {
       if (changed) {
+        if (typeof DB !== 'undefined' && DB._autoRepairOrphanedMatches) {
+          const repaired = DB._autoRepairOrphanedMatches();
+          if (repaired > 0) this.syncToCloud();
+        }
         try { localStorage.setItem('dominostats_db', JSON.stringify(DB._store)); } catch (e) {}
         if (typeof DB !== 'undefined' && DB._invalidateStatsCache) DB._invalidateStatsCache(groupId);
         try {
