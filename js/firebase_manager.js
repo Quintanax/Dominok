@@ -307,8 +307,16 @@ window.CloudDB = {
         cloudData.players.forEach(cp => {
           if (!cp || !cp.id) return;
           const idx = DB._store.players.findIndex(p => p.id === cp.id);
-          if (idx === -1) { DB._store.players.push(cp); changed = true; }
-          else if (JSON.stringify(DB._store.players[idx]) !== JSON.stringify(cp)) { DB._store.players[idx] = cp; changed = true; }
+          if (idx === -1) {
+            // Solo añadir si el jugador de la nube está activo
+            if (cp.active !== false) { DB._store.players.push(cp); changed = true; }
+          } else {
+            // No restaurar si fue marcado como eliminado localmente
+            if (DB._store.players[idx].active === false) return;
+            if (JSON.stringify(DB._store.players[idx]) !== JSON.stringify(cp)) {
+              DB._store.players[idx] = cp; changed = true;
+            }
+          }
         });
       }
       updateLocalAndRefresh(changed);

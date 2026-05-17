@@ -428,9 +428,24 @@ const PlayersPage = {
     DB.deletePlayer(removeId);
     DB._invalidateStatsCache(groupId);
 
+    // Forzar sincronización inmediata a la nube para que Firestore
+    // actualice el array de jugadores antes de que el listener lo restaure
     App.closeModal();
-    Toast.success(`✅ Fusión completada. ${updatedCount} partidas actualizadas.`);
-    this.loadGrid();
+    Toast.info('🔄 Fusionando y sincronizando con la nube...');
+
+    const doSync = async () => {
+      if (typeof CloudDB !== 'undefined' && CloudDB.syncToCloud) {
+        await CloudDB.syncToCloud();
+      }
+      DB._invalidateStatsCache(groupId);
+      Toast.success(`✅ Fusión completada. ${updatedCount} partidas actualizadas.`);
+      this.loadGrid();
+      // Si el usuario está viendo la tabla de posiciones, refrescarla también
+      if (typeof App !== 'undefined' && App.currentPage === 'rankings') {
+        App.navigate('rankings');
+      }
+    };
+    doSync();
   },
 
 
