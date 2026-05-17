@@ -142,7 +142,11 @@ const DB = {
   },
   updatePlayer(id, data) {
     const idx = this._store.players.findIndex(p => p.id === id);
-    if (idx >= 0) { this._store.players[idx] = {...this._store.players[idx], ...data}; this.save(); }
+    if (idx >= 0) { 
+      this._store.players[idx] = {...this._store.players[idx], ...data}; 
+      this._invalidateStatsCache(this._store.players[idx].groupId);
+      this.save(); 
+    }
   },
   deletePlayer(id) {
     this.updatePlayer(id, { active: false });

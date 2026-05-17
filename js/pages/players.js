@@ -244,8 +244,14 @@ const PlayersPage = {
     };
     if (existingId) { DB.updatePlayer(existingId, data); Toast.success('Jugador actualizado'); }
     else { DB.addPlayer(data); Toast.success('Jugador añadido'); }
+    
     App.closeModal();
     this.loadGrid();
+
+    // Forzar sincronización inmediata para evitar que un refresh devuelva datos viejos
+    if (typeof CloudDB !== 'undefined' && CloudDB.syncToCloud) {
+      CloudDB.syncToCloud();
+    }
   },
 
   // ─── ELIMINADO: LÓGICA REDUNDANTE DE IMPORTACIÓN ───
