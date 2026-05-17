@@ -382,19 +382,22 @@ const DB = {
     if (this._statsCache[cacheKey]) return this._statsCache[cacheKey];
 
     const matches = this.getMatches(groupId);
+    const chronological = [...matches].reverse();
     const pairsMap = {};
 
-    matches.forEach(m => {
+    chronological.forEach(m => {
       const processPair = (teamKey, winnerKey) => {
         const a = m[teamKey].player1;
         const b = m[teamKey].player2;
         if (!a || !b) return;
         const key = [a, b].sort().join('|');
-        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0, shoesGiven: 0 };
+        if (!pairsMap[key]) pairsMap[key] = { played: 0, wins: 0, losses: 0, shoesGiven: 0, history: [] };
         pairsMap[key].played++;
-        if (m.winner === winnerKey) pairsMap[key].wins++;
+        const won = (m.winner === winnerKey);
+        if (won) pairsMap[key].wins++;
         else pairsMap[key].losses++;
         pairsMap[key].shoesGiven += (m.shoes?.[`${teamKey}Given`] || 0);
+        pairsMap[key].history.push(won);
       };
       processPair('team1', 'team1');
       processPair('team2', 'team2');
@@ -407,6 +410,18 @@ const DB = {
       const p2 = this.getPlayerById(id2);
       if (p1 && p2) {
         stats.eff = stats.played > 0 ? parseFloat(((stats.wins / stats.played) * 100).toFixed(1)) : 0;
+        
+        let maxWinStreak = 0, maxLossStreak = 0, tempStreak = 0, tempType = null;
+        for (const won of stats.history) {
+          if (tempType === null) { tempType = won ? 'win' : 'loss'; tempStreak = 1; }
+          else if ((won && tempType === 'win') || (!won && tempType === 'loss')) tempStreak++;
+          else { tempType = won ? 'win' : 'loss'; tempStreak = 1; }
+          if (tempType === 'win') maxWinStreak = Math.max(maxWinStreak, tempStreak);
+          else maxLossStreak = Math.max(maxLossStreak, tempStreak);
+        }
+        stats.maxWinStreak = maxWinStreak;
+        stats.maxLossStreak = maxLossStreak;
+
         result.push({ p1, p2, stats });
       }
     }

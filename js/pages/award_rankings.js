@@ -18,9 +18,11 @@ const AwardRankingsPage = {
 
   _pairCats: [
     { id: 'pairwins',  icon: '🏆', label: 'Pareja con Más Victorias',   key: p => p.stats.wins,    fmt: v => `${v} V` },
+    { id: 'pairstreak',icon: '🔥', label: 'Racha Más Larga',            key: p => p.stats.maxWinStreak || 0, fmt: v => `${v} seguidas` },
     { id: 'paireff',   icon: '📈', label: 'Pareja Más Efectiva',        key: p => p.stats.played >= 3 ? p.stats.eff : -1, fmt: v => `${v}%` },
     { id: 'pairplayed',icon: '🎮', label: 'Pareja Más Activa',          key: p => p.stats.played,  fmt: v => `${v} PJ` },
     { id: 'pairshoes', icon: '👟', label: 'Pareja que Más Zapatea',     key: p => (p.stats.shoesGiven || 0), fmt: v => `${v} 👟` },
+    { id: 'pairloss',  icon: '💔', label: 'Peor Racha (Derrotas)',      key: p => p.stats.maxLossStreak || 0, fmt: v => `${v} seguidas` },
   ],
 
   state: { tab: 'individual' },
