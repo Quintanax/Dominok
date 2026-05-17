@@ -13,6 +13,7 @@ const PlayersPage = {
           <div class="page-header-sub">Gestión de participantes</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent-warning)" onclick="PlayersPage.detectDuplicates()">🧹 Limpiar Duplicados</button>
           <button class="btn btn-ghost btn-sm" onclick="PlayersPage.exportPlayers()">⬇ Exportar</button>
           <button class="btn btn-secondary btn-sm" onclick="App.navigate('import')">📂 Importar Excel/CSV</button>
           <button class="btn btn-primary" onclick="PlayersPage.openNew()">+ Nuevo Jugador</button>
@@ -39,6 +40,54 @@ const PlayersPage = {
   },
 
   afterRender() { this.loadGrid(); },
+
+  detectDuplicates() {
+    const groupId = Auth.getGroupId();
+    const players = DB.getAllPlayerStats(groupId);
+
+    const byName = {};
+    players.forEach(p => {
+      const name = p.name.trim().toLowerCase();
+      if (!byName[name]) byName[name] = [];
+      byName[name].push(p);
+    });
+
+    let duplicatesToRemove = [];
+    Object.values(byName).forEach(group => {
+      if (group.length > 1) {
+        // Ordenar: 1º más partidas jugadas, 2º más antiguo
+        group.sort((a, b) => {
+          if (b.stats.played !== a.stats.played) return b.stats.played - a.stats.played;
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        });
+        // Conservar el primero, marcar el resto para borrar
+        for (let i = 1; i < group.length; i++) {
+          duplicatesToRemove.push(group[i]);
+        }
+      }
+    });
+
+    if (duplicatesToRemove.length === 0) {
+      Toast.info('✅ No se encontraron jugadores duplicados.');
+      return;
+    }
+
+    const listHtml = duplicatesToRemove.map(p => `<li><b>${Utils.escHtml(p.name)}</b> (ID: ${p.id.substring(0,5)}...)</li>`).join('');
+    
+    App.confirmDialog(
+      '🧹 Detectados Duplicados',
+      `Se detectaron <b>${duplicatesToRemove.length}</b> jugadores duplicados. Se conservará automáticamente el perfil con más partidas jugadas o el registro más antiguo.<br><br>
+      <b>Se eliminarán permanentemente:</b><br>
+      <ul style="max-height:150px;overflow-y:auto;text-align:left;font-size:0.85rem;margin-top:10px;background:var(--bg-elevated);padding:10px;border-radius:6px;list-style:inside">
+        ${listHtml}
+      </ul><br>¿Deseas eliminarlos ahora?`,
+      () => {
+        duplicatesToRemove.forEach(p => DB.deletePlayer(p.id));
+        Toast.success(`Se eliminaron ${duplicatesToRemove.length} jugadores duplicados.`);
+        this.loadGrid();
+      }
+    );
+  },
 
   // Normaliza aliases: acepta array nuevo o string antiguo (backward compat)
   _getAliasArray(player) {
