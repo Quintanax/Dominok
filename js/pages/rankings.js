@@ -9,7 +9,7 @@ const RankingsPage = {
     <div class="page-enter">
       <div class="page-header" style="margin-bottom:14px;">
         <div class="page-header-left">
-          <div class="page-header-title">🏆 Rankings</div>
+          <div class="page-header-title">🏆 Tabla de Posiciones</div>
           <div class="page-header-sub">Tabla de posiciones</div>
         </div>
         <div class="page-header-actions" style="gap:6px">

@@ -34,7 +34,7 @@ const App = {
     dashboard:          '📊 Dashboard',
     matches:            '🎮 Partidas',
     players:            '👥 Jugadores',
-    rankings:           '🏆 Rankings',
+    rankings:           '🏆 Tabla de Posiciones',
     history:            '📚 Historial',
     stats:              '📈 Estadísticas',
     predictor:          '🔮 Predictor',
@@ -171,7 +171,7 @@ const App = {
         </div>
         <div class="nav-section">
           <span class="nav-section-label">Vista de Grupos</span>
-          ${ni('rankings',   '🏆', 'Ranking Global')}
+          ${ni('rankings',   '🏆', 'Tabla de Posiciones')}
           ${ni('reports',    '📋', 'Reportes')}
           ${ni('import',     '📂', 'Importar datos')}
         </div>`;
@@ -186,7 +186,7 @@ const App = {
         </div>
         <div class="nav-section">
           <span class="nav-section-label">Análisis</span>
-          ${ni('rankings',   '🏆', 'Rankings')}
+          ${ni('rankings',   '🏆', 'Tabla de Posiciones')}
           ${ni('history',    '📚', 'Historial')}
           ${ni('stats',      '📈', 'Estadísticas')}
           ${ni('predictor',  '🔮', 'Predictor')}
