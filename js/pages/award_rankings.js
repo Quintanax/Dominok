@@ -8,7 +8,7 @@ const AwardRankingsPage = {
   _individualCats: [
     { id: 'wins',          icon: '🏆', label: 'Más Victorias',        key: p => p.stats.wins,                        fmt: v => `${v} V` },
     { id: 'shoes',         icon: '👟', label: 'Más Zapatos Dados',    key: p => p.stats.shoesGiven,                   fmt: v => `${v} 👟` },
-    { id: 'streak',        icon: '🔥', label: 'Racha Más Larga',      key: p => p.stats.bestStreak || p.stats.currentStreak || 0, fmt: v => `${v} seguidas` },
+    { id: 'streak',        icon: '🔥', label: 'Racha Más Larga',      key: p => p.stats.maxWinStreak || 0,            fmt: v => `${v} seguidas` },
     { id: 'eff',           icon: '📈', label: 'Mayor Efectividad',    key: p => p.stats.played >= 3 ? p.stats.eff : -1,  fmt: v => `${v}%` },
     { id: 'pointDiff',     icon: '🎯', label: 'Mejor Diferencial',    key: p => p.stats.pointDiff,                    fmt: v => (v >= 0 ? '+' : '') + v },
     { id: 'shoesReceived', icon: '😬', label: 'Más Zapatos Recibidos',key: p => p.stats.shoesReceived,                fmt: v => `${v} 👟` },
