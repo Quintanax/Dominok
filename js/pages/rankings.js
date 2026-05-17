@@ -40,21 +40,14 @@ const RankingsPage = {
     const el = document.getElementById('rankings-content');
     if (!el) return;
     if (this.state.tab === 'local') {
-      const mt = this.state.mobileTab;
+      const mt = this.state.mobileTab || 'individual';
       el.innerHTML = `
-        <div class="rk-mobile-toggle">
-          <button class="rk-mt-btn ${mt==='individual'?'active':''}" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
-          <button class="rk-mt-btn ${mt==='pairs'?'active':''}" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
+        <div style="display:flex;gap:8px;margin-bottom:16px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content">
+          <button class="btn btn-sm ${mt==='individual'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
+          <button class="btn btn-sm ${mt==='pairs'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
         </div>
-        <div class="rk-split-view">
-          <div class="rk-split-col ${mt==='individual'?'rk-m-active':'rk-m-hidden'}">
-            <h3 class="rk-split-title">👤 Individual</h3>
-            ${this._renderPlayers()}
-          </div>
-          <div class="rk-split-col ${mt==='pairs'?'rk-m-active':'rk-m-hidden'}">
-            <h3 class="rk-split-title">👥 Parejas</h3>
-            ${this._renderPairs()}
-          </div>
+        <div>
+          ${mt==='individual' ? this._renderPlayers() : this._renderPairs()}
         </div>
       `;
     } else {
@@ -153,7 +146,14 @@ const RankingsPage = {
   /* ── PAIRS ──────────────────────────────────── */
   _renderPairs() {
     const groupId = Auth.getGroupId();
-    const pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= 1);
+    let pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= 1);
+    
+    // Si el criterio de sort no aplica a parejas (ej: pointDiff), usamos 'wins'
+    const validSorts = ['eff', 'wins', 'losses', 'played'];
+    const currentSort = validSorts.includes(this.state.sort) ? this.state.sort : 'wins';
+    
+    pairs = Utils.sortArray(pairs, `stats.${currentSort}`, this.state.dir);
+
     if (!pairs.length) {
       return `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">No hay datos de parejas aún</div></div>`;
     }
@@ -199,7 +199,14 @@ const RankingsPage = {
       </div>`;
     }).join('');
 
-    return `${podiumHtml}<div class="rk-list">${listHtml}</div>`;
+    return `
+      ${podiumHtml}
+      <div class="rk-sort-bar">
+        ${[['eff','EFF%'],['wins','V'],['losses','D'],['played','PJ']].map(([k,l]) =>
+          `<button class="rk-sort-btn ${currentSort===k?'active':''}" onclick="RankingsPage.toggleSort('${k}')">${l}${currentSort===k?(this.state.dir==='desc'?' ↓':' ↑'):''}</button>`
+        ).join('')}
+      </div>
+      <div class="rk-list">${listHtml}</div>`;
   },
 
   /* ── GLOBAL ─────────────────────────────────── */

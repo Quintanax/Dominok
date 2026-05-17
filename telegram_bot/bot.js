@@ -171,7 +171,7 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
     // ── Cargar datos del grupo desde Firestore ───────────────
     const groupRef = db.collection('groups').doc(DEFAULT_GROUP_ID);
     const doc = await groupRef.get();
-    const groupData = doc.exists ? doc.data() : { matches: [], players: [] };
+    const groupData = doc.exists ? doc.data() : { players: [] };
     const players = groupData.players || [];
 
     // ── Resolver ID de jugador por nombre o alias numérico ──
@@ -184,34 +184,42 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
       return p ? p.id : null;
     };
 
-    const newMatches = data.partidas.map(p => ({
-      id: Date.now() + Math.random().toString(36).substr(2, 9),
-      groupId: DEFAULT_GROUP_ID,
-      type: 'friendly',
-      date: new Date().toISOString().split('T')[0],
-      team1: {
-        player1: findId(p.p1_j1, p.p1_j1_num),
-        player2: findId(p.p1_j2, p.p1_j2_num),
-        player1Name: p.p1_j1,
-        player2Name: p.p1_j2
-      },
-      team2: {
-        player1: findId(p.p2_j1, p.p2_j1_num),
-        player2: findId(p.p2_j2, p.p2_j2_num),
-        player1Name: p.p2_j1,
-        player2Name: p.p2_j2
-      },
-      score: { team1: p.p1_pts, team2: p.p2_pts },
-      winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
-      shoes: { team1Given: 0, team2Given: 0 },
-      notes: 'Registrado vía Telegram (Groq)'
-    }));
+    const newMatches = data.partidas.map(p => {
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      return {
+        id,
+        groupId: DEFAULT_GROUP_ID,
+        type: 'friendly',
+        date: new Date().toISOString().split('T')[0],
+        team1: {
+          player1: findId(p.p1_j1, p.p1_j1_num),
+          player2: findId(p.p1_j2, p.p1_j2_num),
+          player1Name: p.p1_j1,
+          player2Name: p.p1_j2
+        },
+        team2: {
+          player1: findId(p.p2_j1, p.p2_j1_num),
+          player2: findId(p.p2_j2, p.p2_j2_num),
+          player1Name: p.p2_j1,
+          player2Name: p.p2_j2
+        },
+        score: { team1: p.p1_pts, team2: p.p2_pts },
+        winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
+        shoes: { team1Given: 0, team2Given: 0 },
+        notes: 'Registrado vía Telegram (Groq)'
+      };
+    });
 
-    groupData.matches = [...(groupData.matches || []), ...newMatches];
-    await groupRef.set(groupData, { merge: true });
+    // Guardar las nuevas partidas en la subcolección 'matches' usando batch
+    const batch = db.batch();
+    for (const m of newMatches) {
+      const mRef = groupRef.collection('matches').doc(m.id);
+      batch.set(mRef, m);
+    }
+    await batch.commit();
 
     ctx.reply(`✅ ¡Éxito! Se registraron ${newMatches.length} partida(s) en el sistema.`);
-    console.log(`💾 ${newMatches.length} partida(s) guardadas en Firestore para grupo: ${DEFAULT_GROUP_ID}`);
+    console.log(`💾 ${newMatches.length} partida(s) guardadas en la subcolección de Firestore para grupo: ${DEFAULT_GROUP_ID}`);
 
   } catch (error) {
     console.error('❌ Error procesando foto:', error);

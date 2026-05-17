@@ -276,172 +276,108 @@ window.CloudDB = {
 
   listenToCloud() {
     const db = this._getDb();
-    if (!db) {
-      console.error('❌ CloudDB.listenToCloud: No hay conexión a Firebase.');
-      return;
-    }
+    if (!db) return;
+    const groupId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.groupId : null;
+    if (!groupId) return;
 
-    // Get the groupId from the currently logged-in user
-    const groupId = (typeof Auth !== 'undefined' && Auth.currentUser)
-      ? Auth.currentUser.groupId
-      : null;
+    if (this._unsubscribe) { this._unsubscribe(); this._unsubscribe = null; }
+    if (this._unsubscribeMatches) { this._unsubscribeMatches(); this._unsubscribeMatches = null; }
 
-    if (!groupId) {
-      console.warn('⚠️ CloudDB.listenToCloud: No hay groupId. ¿El usuario está logueado?');
-      return;
-    }
-
-    console.log('👂 CloudDB: Escuchando Firestore para grupo:', groupId);
-
-    // Cancel previous listener if any
-    if (this._unsubscribe) {
-      this._unsubscribe();
-      this._unsubscribe = null;
-    }
-
-    this._unsubscribe = db.collection('groups').doc(groupId).onSnapshot(
-      (docSnap) => {
-        if (!docSnap.exists) {
-          console.log('ℹ️ CloudDB: No existe documento en Firestore para este grupo todavía.');
-          return;
-        }
-
-        const cloudData = docSnap.data();
-        console.log('☁️ CloudDB: Datos recibidos de Firestore:', {
-          matches: (cloudData.matches || []).length,
-          players: (cloudData.players || []).length
-        });
-
-        let changed = false;
-
-        // Sync players
-        if (Array.isArray(cloudData.players)) {
-          cloudData.players.forEach(cp => {
-            if (!cp || !cp.id) return;
-            const idx = DB._store.players.findIndex(p => p.id === cp.id);
-            if (idx === -1) {
-              DB._store.players.push(cp);
-              changed = true;
-              console.log('👤 CloudDB: Nuevo jugador sincronizado:', cp.name || cp.id);
-            } else if (JSON.stringify(DB._store.players[idx]) !== JSON.stringify(cp)) {
-              DB._store.players[idx] = cp;
-              changed = true;
-            }
-          });
-        }
-
-        // Sync matches + resolve player IDs from names (Telegram-origin matches)
-        if (Array.isArray(cloudData.matches)) {
-          const deletedIds = DB._store.deletedMatchIds || [];
-          cloudData.matches.forEach(cm => {
-            if (!cm || !cm.id) return;
-            if (deletedIds.includes(cm.id)) return; // Ignorar si fue eliminada localmente
-
-            // Resolve names → IDs
-            this._resolvePlayerIdsInMatch(cm, groupId);
-
-            const idx = DB._store.matches.findIndex(m => m.id === cm.id);
-            if (idx === -1) {
-              DB._store.matches.push(cm);
-              changed = true;
-              console.log('🎮 CloudDB: Nueva partida sincronizada:', cm.id);
-            } else {
-              // Re-resolve on existing entry in case players were registered after
-              const existingResolved = this._resolvePlayerIdsInMatch(DB._store.matches[idx], groupId);
-              if (existingResolved || JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) {
-                DB._store.matches[idx] = cm;
-                changed = true;
-              }
-            }
-          });
-        }
-
-        // Also re-resolve any existing stored matches that still lack player IDs
-        DB._store.matches.forEach(m => {
-          if (m.groupId === groupId) {
-            const resolved = this._resolvePlayerIdsInMatch(m, groupId);
-            if (resolved) changed = true;
+    const updateLocalAndRefresh = (changed) => {
+      if (changed) {
+        try { localStorage.setItem('dominostats_db', JSON.stringify(DB._store)); } catch (e) {}
+        if (typeof DB !== 'undefined' && DB._invalidateStatsCache) DB._invalidateStatsCache(groupId);
+        try {
+          if (typeof App !== 'undefined' && App.currentPage) {
+            if (App.currentPage === 'matches' && typeof MatchesPage !== 'undefined') MatchesPage.loadTable();
+            else if (App.currentPage === 'dashboard') App.navigate('dashboard');
+            else App.navigate(App.currentPage);
           }
-        });
-
-
-        if (changed) {
-          // Persist to localStorage so DB.getMatches() picks it up
-          try {
-            localStorage.setItem('dominostats_db', JSON.stringify(DB._store));
-            console.log('💾 CloudDB: localStorage actualizado con datos de Firebase.');
-          } catch (e) {
-            console.error('❌ CloudDB: Error guardando en localStorage:', e);
-          }
-
-          // Invalidar caché de stats para que se recalcule con los datos nuevos
-          if (typeof DB !== 'undefined' && DB._invalidateStatsCache) {
-            DB._invalidateStatsCache(groupId);
-          }
-
-          // Refresh current page view
-          try {
-            if (typeof App !== 'undefined' && App.currentPage) {
-              if (App.currentPage === 'matches' && typeof MatchesPage !== 'undefined' && MatchesPage.loadTable) {
-                MatchesPage.loadTable();
-                console.log('🔄 CloudDB: Tabla de partidas actualizada.');
-              } else if (App.currentPage === 'dashboard' && typeof DashboardPage !== 'undefined' && DashboardPage.render) {
-                App.navigate('dashboard');
-              } else if (typeof App.navigate === 'function') {
-                App.navigate(App.currentPage);
-              }
-            }
-          } catch (e) {
-            console.error('❌ CloudDB: Error al refrescar UI:', e);
-          }
-        } else {
-          console.log('ℹ️ CloudDB: Sin cambios respecto al estado local.');
-        }
-      },
-      (error) => {
-        console.error('❌ CloudDB: Error en el listener de Firestore:', error.code, error.message);
+        } catch (e) {}
       }
-    );
+    };
+
+    // 1. Escuchar jugadores y datos de grupo
+    this._unsubscribe = db.collection('groups').doc(groupId).onSnapshot(docSnap => {
+      if (!docSnap.exists) return;
+      const cloudData = docSnap.data();
+      let changed = false;
+
+      if (Array.isArray(cloudData.players)) {
+        cloudData.players.forEach(cp => {
+          if (!cp || !cp.id) return;
+          const idx = DB._store.players.findIndex(p => p.id === cp.id);
+          if (idx === -1) { DB._store.players.push(cp); changed = true; }
+          else if (JSON.stringify(DB._store.players[idx]) !== JSON.stringify(cp)) { DB._store.players[idx] = cp; changed = true; }
+        });
+      }
+      updateLocalAndRefresh(changed);
+    });
+
+    // 2. Escuchar subcolección de partidas
+    this._unsubscribeMatches = db.collection('groups').doc(groupId).collection('matches').onSnapshot(snap => {
+      let changed = false;
+      const deletedIds = DB._store.deletedMatchIds || [];
+      
+      snap.docChanges().forEach(change => {
+        const cm = change.doc.data();
+        cm.id = change.doc.id;
+        if (deletedIds.includes(cm.id)) return;
+
+        this._resolvePlayerIdsInMatch(cm, groupId);
+
+        const idx = DB._store.matches.findIndex(m => m.id === cm.id);
+        if (change.type === 'added' || change.type === 'modified') {
+          if (idx === -1) { DB._store.matches.push(cm); changed = true; }
+          else if (JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) { DB._store.matches[idx] = cm; changed = true; }
+        } else if (change.type === 'removed') {
+          if (idx !== -1) { DB._store.matches.splice(idx, 1); changed = true; }
+        }
+      });
+      updateLocalAndRefresh(changed);
+    });
   },
 
   async syncToCloud() {
     const db = this._getDb();
     if (!db) return false;
-    const groupId = (typeof Auth !== 'undefined' && Auth.currentUser)
-      ? Auth.currentUser.groupId
-      : null;
+    const groupId = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.groupId : null;
     if (!groupId) return false;
 
     try {
-      const docSnap = await db.collection('groups').doc(groupId).get();
-      let cloudMatches = [];
-      let cloudPlayers = [];
-      if (docSnap.exists) {
-        const cloudData = docSnap.data();
-        cloudMatches = cloudData.matches || [];
-        cloudPlayers = cloudData.players || [];
-      }
-
       const localPlayers = DB._store.players.filter(p => p.groupId === groupId);
       const localMatches = DB._store.matches.filter(m => m.groupId === groupId);
-
       const deletedIds = DB._store.deletedMatchIds || [];
 
-      const mergedMatches = [...localMatches];
-      cloudMatches.forEach(cm => {
-        if (!deletedIds.includes(cm.id) && !mergedMatches.some(lm => lm.id === cm.id)) mergedMatches.push(cm);
-      });
-
-      const mergedPlayers = [...localPlayers];
-      cloudPlayers.forEach(cp => {
-        if (!mergedPlayers.some(lp => lp.id === cp.id)) mergedPlayers.push(cp);
-      });
-
+      // 1. Guardar jugadores en el documento del grupo
       await db.collection('groups').doc(groupId).set({
-        players: mergedPlayers,
-        matches: mergedMatches,
+        players: localPlayers,
         lastSync: new Date().toISOString()
       }, { merge: true });
+
+      // 2. Guardar partidas en subcolección (en batches de 450)
+      const batches = [];
+      let currentBatch = db.batch();
+      let opCount = 0;
+
+      for (const m of localMatches) {
+        if (deletedIds.includes(m.id)) continue;
+        
+        const mRef = db.collection('groups').doc(groupId).collection('matches').doc(m.id);
+        currentBatch.set(mRef, m, { merge: true });
+        opCount++;
+
+        if (opCount >= 450) {
+          batches.push(currentBatch);
+          currentBatch = db.batch();
+          opCount = 0;
+        }
+      }
+      
+      if (opCount > 0) batches.push(currentBatch);
+      
+      // Ejecutar batches concurrentemente
+      await Promise.all(batches.map(b => b.commit()));
 
       return true;
     } catch (e) {

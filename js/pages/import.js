@@ -232,19 +232,56 @@ const ImportPage = {
         : (p.alias || '').split(',').map(a => a.trim()).filter(Boolean);
       aliases.forEach(a => { if (a) playerMap[a.toLowerCase()] = p; });
     });
-    const findPlayer = (name) => name ? (playerMap[String(name).toLowerCase().trim()] || null) : null;
+    const getOrCreatePlayer = (rawName) => {
+      if (!rawName) return null;
+      const nameStr = String(rawName).trim();
+      if (!nameStr) return null;
+      const key = nameStr.toLowerCase();
+      if (playerMap[key]) return playerMap[key];
+      
+      // Auto-registrar al jugador si no se encuentra
+      const newPlayer = DB.addPlayer({ 
+        name: nameStr, 
+        aliases: [], 
+        alias: '', 
+        groupId, 
+        notes: 'Auto-registrado desde importación' 
+      });
+      playerMap[key] = newPlayer;
+      return newPlayer;
+    };
 
-    for (const row of this._parsedMatches) {
-      const p1 = findPlayer(row.jugador1 || row.j1 || row['jugador 1']);
-      const p2 = findPlayer(row.jugador2 || row.j2 || row['jugador 2']);
-      const p3 = findPlayer(row.jugador3 || row.j3 || row['jugador 3']);
-      const p4 = findPlayer(row.jugador4 || row.j4 || row['jugador 4']);
+    const errorDetails = [];
+
+    for (let i = 0; i < this._parsedMatches.length; i++) {
+      const row = this._parsedMatches[i];
+      const rowNum = i + 2; // Fila real en Excel/CSV (cabecera = fila 1)
+
+      const rawJ1 = row.jugador1 || row.j1 || row['jugador 1'];
+      const rawJ2 = row.jugador2 || row.j2 || row['jugador 2'];
+      const rawJ3 = row.jugador3 || row.j3 || row['jugador 3'];
+      const rawJ4 = row.jugador4 || row.j4 || row['jugador 4'];
+
+      const p1 = getOrCreatePlayer(rawJ1);
+      const p2 = getOrCreatePlayer(rawJ2);
+      const p3 = getOrCreatePlayer(rawJ3);
+      const p4 = getOrCreatePlayer(rawJ4);
       const s1 = parseInt(row.score1 || row.puntos1 || row['puntos 1']);
       const s2 = parseInt(row.score2 || row.puntos2 || row['puntos 2']);
       const date = row.fecha || row.date || new Date().toISOString().split('T')[0];
       const type = (row.tipo || row.type || 'friendly').toLowerCase().includes('torneo') ? 'tournament' : 'friendly';
 
-      if (!p1 || !p2 || !p3 || !p4 || isNaN(s1) || isNaN(s2) || s1 === s2) { errors++; continue; }
+      let failReason = null;
+      if (!rawJ1 || !rawJ2 || !rawJ3 || !rawJ4) failReason = 'Falta el nombre de 1 o más jugadores';
+      else if (!p1 || !p2 || !p3 || !p4) failReason = 'Error al registrar o buscar jugadores';
+      else if (isNaN(s1) || isNaN(s2)) failReason = 'Puntuación no válida o celda vacía';
+      else if (s1 === s2) failReason = `Empate no válido en dominó (${s1}-${s2})`;
+
+      if (failReason) {
+        errorDetails.push(`Fila ${rowNum}: ${failReason} | Datos crudos: ${JSON.stringify(row)}`);
+        errors++;
+        continue;
+      }
 
       // Detectar zapatos: perder con 0 puntos = zapato recibido
       // team1Given: team1 propinó zapato a team2 (team2 quedó en 0)
@@ -274,10 +311,42 @@ const ImportPage = {
     // ─────────────────────────────────────────────────────────────
 
     if (success > 0) Toast.success(`✅ ${success} partidas importadas`);
-    if (errors > 0)  Toast.warning(`⚠️ ${errors} filas con errores omitidas`);
+    
+    if (errors > 0) {
+      Toast.warning(`⚠️ ${errors} filas con errores omitidas`);
+      this._lastErrors = errorDetails;
+      
+      const errorHtml = errorDetails.slice(0, 30).map(e => `<div style="font-size:0.75rem;margin-bottom:6px;color:var(--accent-danger);border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:6px;word-break:break-all">${Utils.escHtml(e)}</div>`).join('');
+      const moreText = errorDetails.length > 30 ? `<div style="font-weight:bold;margin-top:10px;text-align:center">...y ${errorDetails.length - 30} errores más.</div>` : '';
+      
+      const modalContent = `
+        <div style="margin-bottom:12px;font-size:0.9rem">Se omitieron <b>${errors}</b> filas por tener datos incompletos o inválidos. Aquí están los detalles:</div>
+        <div style="background:var(--bg-card);padding:12px;border:1px solid var(--border-color);border-radius:6px;max-height:350px;overflow-y:auto;margin-bottom:16px;font-family:monospace">
+          ${errorHtml}
+          ${moreText}
+        </div>
+        <button class="btn btn-secondary" style="width:100%" onclick="ImportPage.downloadErrorReport()">📥 Descargar reporte completo (.txt)</button>
+      `;
+      App.openModal({
+        title: '⚠️ Detalle de Errores',
+        body: modalContent,
+        footer: ''
+      });
+    }
+    
     this.clearPreview('matches');
   },
 
+
+  downloadErrorReport() {
+    if (!this._lastErrors || this._lastErrors.length === 0) return;
+    const reportText = "REPORTE DE ERRORES DE IMPORTACIÓN\n=================================\n\n" + this._lastErrors.join('\n\n');
+    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `Reporte_Errores_${new Date().toISOString().split('T')[0]}.txt`; a.click();
+    URL.revokeObjectURL(url);
+  },
 
   downloadTemplate(type) {
     const templates = {
