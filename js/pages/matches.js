@@ -13,6 +13,7 @@ const MatchesPage = {
           <div class="page-header-sub">Gestión y registro de partidas</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent-warning)" onclick="MatchesPage.detectDuplicates()" title="Limpiar Duplicados">🧹 Limpiar Duplicados</button>
           <button class="btn btn-ghost btn-sm" onclick="MatchesPage.exportMatches()" title="Exportar">⬇</button>
           <button class="btn btn-secondary btn-sm" onclick="GeminiOCR.openUploadModal()" title="Cargar imagen">📷</button>
           <button class="btn btn-primary btn-sm" onclick="MatchesPage.openNew()">+ Nueva</button>
@@ -43,6 +44,58 @@ const MatchesPage = {
   },
 
   afterRender() { this.loadTable(); },
+
+  detectDuplicates() {
+    const groupId = Auth.getGroupId();
+    const matches = DB.getMatches(groupId);
+
+    const byHash = {};
+    matches.forEach(m => {
+      // Ordenar jugadores dentro de cada equipo
+      const t1 = [m.team1.player1, m.team1.player2].sort();
+      const t2 = [m.team2.player1, m.team2.player2].sort();
+      
+      // Ordenar los equipos para manejar casos donde el Equipo 1 y 2 están invertidos
+      let teamA, teamB, scoreA, scoreB;
+      if (t1[0] < t2[0]) {
+        teamA = t1; teamB = t2; scoreA = m.score.team1; scoreB = m.score.team2;
+      } else {
+        teamA = t2; teamB = t1; scoreA = m.score.team2; scoreB = m.score.team1;
+      }
+
+      // Hash único que identifica la partida exacta
+      const hash = `${m.date}|${teamA[0]}|${teamA[1]}|${teamB[0]}|${teamB[1]}|${scoreA}|${scoreB}`;
+      if (!byHash[hash]) byHash[hash] = [];
+      byHash[hash].push(m);
+    });
+
+    let duplicatesToRemove = [];
+    Object.values(byHash).forEach(group => {
+      if (group.length > 1) {
+        // Ordenar por fecha de creación (los más antiguos primero)
+        group.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        // Guardar todos excepto el primero (el original) para ser eliminados
+        for (let i = 1; i < group.length; i++) {
+          duplicatesToRemove.push(group[i]);
+        }
+      }
+    });
+
+    if (duplicatesToRemove.length === 0) {
+      Toast.info('✅ No se encontraron partidas duplicadas.');
+      return;
+    }
+
+    App.confirmDialog(
+      '🧹 Partidas Duplicadas',
+      `Se detectaron <b>${duplicatesToRemove.length}</b> partidas duplicadas (misma fecha, mismos jugadores y mismo resultado).<br><br>¿Deseas eliminarlas para sanear el historial?`,
+      () => {
+        duplicatesToRemove.forEach(m => DB.deleteMatch(m.id));
+        Toast.success(`Se eliminaron ${duplicatesToRemove.length} partidas duplicadas.`);
+        this.loadTable();
+      }
+    );
+  },
 
   getFiltered() {
     const groupId = Auth.getGroupId();
