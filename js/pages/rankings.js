@@ -129,6 +129,7 @@ const RankingsPage = {
           ${st.currentStreak > 1 ? `<span class="rk-streak">${streakHtml}</span>` : ''}
         </div>
         <div class="rk-stats-inline">
+          <span class="rk-stat"><b>${st.played}</b><small>PJ</small></span>
           <span class="rk-stat text-success"><b>${st.wins}</b><small>V</small></span>
           <span class="rk-stat text-danger"><b>${st.losses}</b><small>D</small></span>
           <span class="rk-stat rk-stat-shoes" style="color:var(--accent-warning)"><b>${st.shoesGiven}</b><small>👟</small></span>
@@ -195,8 +196,10 @@ const RankingsPage = {
             <span class="rk-name">${Utils.escHtml(pair.p1.name.split(' ')[0])} &amp; ${Utils.escHtml(pair.p2.name.split(' ')[0])}</span>
           </div>
           <div class="rk-stats-inline">
+            <span class="rk-stat"><b>${pair.stats.played}</b><small>PJ</small></span>
             <span class="rk-stat text-success"><b>${pair.stats.wins}</b><small>V</small></span>
             <span class="rk-stat text-danger"><b>${pair.stats.losses}</b><small>D</small></span>
+            <span class="rk-stat rk-stat-shoes" style="color:var(--accent-warning)"><b>${pair.stats.shoesGiven || 0}</b><small>👟</small></span>
           </div>
           <div class="rk-eff-col">
             <span class="rk-eff-val ${pair.stats.eff>50?'text-success':pair.stats.eff<30?'text-danger':''}">${pair.stats.eff}%</span>
