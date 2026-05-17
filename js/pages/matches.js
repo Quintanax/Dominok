@@ -49,21 +49,34 @@ const MatchesPage = {
     const groupId = Auth.getGroupId();
     const matches = DB.getMatches(groupId);
 
+    // Helper: resuelve el nombre normalizado de un jugador por ID,
+    // con fallback al nombre guardado en la propia partida
+    const resolveName = (id, fallbackName) => {
+      const p = id ? DB.getPlayerById(id) : null;
+      return ((p ? p.name : fallbackName) || '').trim().toLowerCase();
+    };
+
     const byHash = {};
     matches.forEach(m => {
-      // Ordenar jugadores dentro de cada equipo
-      const t1 = [m.team1.player1, m.team1.player2].sort();
-      const t2 = [m.team2.player1, m.team2.player2].sort();
-      
-      // Ordenar los equipos para manejar casos donde el Equipo 1 y 2 están invertidos
+      // Resolver nombres normalizados (no IDs) para cada posición
+      const n1_t1 = resolveName(m.team1.player1, m.team1.player1Name);
+      const n2_t1 = resolveName(m.team1.player2, m.team1.player2Name);
+      const n1_t2 = resolveName(m.team2.player1, m.team2.player1Name);
+      const n2_t2 = resolveName(m.team2.player2, m.team2.player2Name);
+
+      // Ordenar jugadores dentro de cada equipo alfabéticamente
+      const t1 = [n1_t1, n2_t1].sort();
+      const t2 = [n1_t2, n2_t2].sort();
+
+      // Ordenar los dos equipos para no depender de cuál fue Equipo1/Equipo2
       let teamA, teamB, scoreA, scoreB;
-      if (t1[0] < t2[0]) {
+      if (t1.join('|') <= t2.join('|')) {
         teamA = t1; teamB = t2; scoreA = m.score.team1; scoreB = m.score.team2;
       } else {
         teamA = t2; teamB = t1; scoreA = m.score.team2; scoreB = m.score.team1;
       }
 
-      // Hash único que identifica la partida exacta
+      // Hash basado en NOMBRES + fecha + marcador (no en IDs)
       const hash = `${m.date}|${teamA[0]}|${teamA[1]}|${teamB[0]}|${teamB[1]}|${scoreA}|${scoreB}`;
       if (!byHash[hash]) byHash[hash] = [];
       byHash[hash].push(m);
