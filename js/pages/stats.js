@@ -17,9 +17,16 @@ const StatsPage = {
 
   render() {
     return `
-    <div class="page-enter stats-layout">
-      <!-- MOBILE: compact horizontal pill nav -->
-      <div class="stats-mobile-nav">
+    <div class="page-enter">
+      <div class="page-header" style="margin-bottom: 16px;">
+        <div class="page-header-left">
+          <div class="page-header-title">📈 Estadísticas</div>
+          <div class="page-header-sub">Análisis avanzado de rendimiento</div>
+        </div>
+      </div>
+
+      <!-- TOP NAV (All screen sizes) -->
+      <div class="stats-top-nav">
         <div class="stats-pills" id="stats-pills">
           ${this._tabs.map(([id,icon,text,stars])=>
             `<button class="stats-pill ${this.state.tab===id?'active':''}" data-tab="${id}" onclick="StatsPage.go('${id}')">${icon} ${text}</button>`
@@ -27,44 +34,39 @@ const StatsPage = {
         </div>
       </div>
 
-      <!-- DESKTOP: sidebar -->
-      <aside class="stats-sidebar">
-        <div class="stats-sidebar-label">📊 Analíticas</div>
-        <nav id="stats-nav" style="display:flex;flex-direction:column;gap:2px">
-          ${this._tabs.map(([id,icon,text,stars])=>this._nav(id,icon,text,stars)).join('')}
-        </nav>
-      </aside>
-
-      <main class="stats-main" id="stats-content"></main>
+      <main class="stats-main" id="stats-content" style="margin-top: 16px;"></main>
     </div>
     <style>
       /* ── Stats Layout ─────────────────────── */
-      .stats-layout {
-        display: flex; gap: 16px; min-height: 80vh;
-      }
-      .stats-sidebar {
-        width: 220px; flex-shrink: 0;
+      .stats-top-nav {
+        width: 100%; box-sizing: border-box;
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
-        padding: 12px;
-        overflow-y: auto;
-        max-height: 80vh;
-        position: sticky; top: 12px;
+        padding: 8px;
+        overflow: hidden;
       }
-      .stats-sidebar-label {
-        font-size: 0.68rem; text-transform: uppercase;
-        letter-spacing: 1.5px; color: var(--text-muted);
-        padding: 4px 12px 10px; font-weight: 700;
+      .stats-pills {
+        display: flex; gap: 8px;
+        overflow-x: auto; padding-bottom: 2px;
+        scrollbar-width: none;
       }
-      .stats-main { flex: 1; min-width: 0; }
-      .stats-mobile-nav { display: none; }
-
-      /* ── Desktop nav items ───────────────── */
-      .snav { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);border:none;background:transparent;color:var(--text-secondary);font-size:0.85rem;font-weight:600;text-align:left;cursor:pointer;transition:all .15s;width:100% }
-      .snav:hover { background:var(--bg-elevated);color:var(--text-primary) }
-      .snav.active { background:rgba(108,99,255,.15);color:var(--accent-primary);border-left:3px solid var(--accent-primary) }
-      .snav .star { font-size:0.6rem;opacity:0.45;margin-left:auto;white-space:nowrap }
+      .stats-pills::-webkit-scrollbar { display: none; }
+      .stats-pill {
+        padding: 8px 16px; border-radius: 20px;
+        font-size: 0.85rem; font-weight: 600;
+        background: var(--bg-elevated); color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        white-space: nowrap; flex-shrink: 0;
+        transition: all 150ms; cursor: pointer;
+      }
+      .stats-pill:hover { background: var(--bg-hover); color: var(--text-primary); }
+      .stats-pill.active {
+        background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        color: #fff; border-color: transparent;
+        box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+      }
+      .stats-main { width: 100%; min-width: 0; }
 
       /* ── Stat content cards ──────────────── */
       .stat-card { background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px }
@@ -83,46 +85,6 @@ const StatsPage = {
 
       /* ── MOBILE ≤768px ───────────────────── */
       @media (max-width: 768px) {
-        /* Layout: stack vertically, no horizontal overflow */
-        .stats-layout {
-          flex-direction: column; gap: 10px; min-height: unset;
-          overflow-x: hidden; width: 100%; min-width: 0;
-        }
-        .stats-sidebar { display: none; }
-        .stats-main { 
-          overflow-x: hidden; width: 100%; min-width: 0; 
-        }
-
-        /* Mobile pill nav */
-        .stats-mobile-nav {
-          display: block; width: 100%; min-width: 0; box-sizing: border-box;
-          background: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius-lg);
-          padding: 8px;
-          overflow: hidden;
-        }
-        .stats-pills {
-          display: flex; gap: 5px;
-          overflow-x: auto; padding-bottom: 2px;
-          scrollbar-width: none;
-        }
-        .stats-pills::-webkit-scrollbar { display: none; }
-        .stats-pill {
-          padding: 6px 12px; border-radius: 20px;
-          font-size: 0.75rem; font-weight: 600;
-          background: var(--bg-elevated); color: var(--text-secondary);
-          border: 1px solid var(--border-color);
-          white-space: nowrap; flex-shrink: 0;
-          transition: all 150ms; cursor: pointer;
-        }
-        .stats-pill.active {
-          background: linear-gradient(135deg, #4F46E5, #7C3AED);
-          color: #fff; border-color: transparent;
-          box-shadow: 0 2px 8px rgba(99,102,241,0.35);
-        }
-
-        /* Force ALL content to stay within screen */
         .stat-card { 
           padding: 12px; overflow: hidden; box-sizing: border-box; 
           width: 100%; min-width: 0; max-width: 100%;
@@ -136,9 +98,6 @@ const StatsPage = {
           white-space: normal; word-break: break-word;
         }
 
-
-
-        /* Selects and form elements: full width */
         .stats-main select,
         .stats-main .form-select,
         .stats-main .form-group {
@@ -147,7 +106,6 @@ const StatsPage = {
           box-sizing: border-box;
         }
 
-        /* VS Hero: stack vertically instead of side-by-side */
         .vs-hero {
           flex-direction: column; gap: 8px; padding: 12px 8px;
         }
@@ -159,17 +117,13 @@ const StatsPage = {
         }
         .big-score { font-size: 1.8rem; }
 
-        /* Nemesis/Teammate dual cards: stack */
         .nemesis-card { padding: 12px 8px; }
         .nemesis-card .avatar-xl {
           width: 44px !important; height: 44px !important;
           font-size: 0.95rem !important;
         }
 
-        /* Form dots (recent form): smaller, wrap */
         .form-dot { width: 20px; height: 20px; font-size: 0.6rem; }
-
-        /* Tables: allow horizontal scroll inside their own container */
         .table-wrapper { overflow-x: auto; }
       }
     </style>`;
@@ -185,11 +139,7 @@ const StatsPage = {
 
   go(tab) {
     this.state.tab = tab;
-    // Update desktop nav
-    document.querySelectorAll('#stats-nav .snav').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tab);
-    });
-    // Update mobile pills
+    // Update pills
     document.querySelectorAll('#stats-pills .stats-pill').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tab);
     });
