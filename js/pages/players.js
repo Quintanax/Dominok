@@ -14,6 +14,7 @@ const PlayersPage = {
         </div>
         <div class="page-header-actions">
           <button class="btn btn-ghost btn-sm" style="color:var(--accent-warning)" onclick="PlayersPage.detectDuplicates()">🧹 Limpiar Duplicados</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--accent-secondary)" onclick="PlayersPage.openMerge()">🔀 Fusionar Jugadores</button>
           <button class="btn btn-ghost btn-sm" onclick="PlayersPage.exportPlayers()">⬇ Exportar</button>
           <button class="btn btn-secondary btn-sm" onclick="App.navigate('import')">📂 Importar Excel/CSV</button>
           <button class="btn btn-primary" onclick="PlayersPage.openNew()">+ Nuevo Jugador</button>
@@ -249,6 +250,189 @@ const PlayersPage = {
 
   // ─── ELIMINADO: LÓGICA REDUNDANTE DE IMPORTACIÓN ───
   // La importación ahora se maneja centralizadamente en ImportPage (js/pages/import.js)
+
+  /* ── FUSIÓN DE JUGADORES ────────────────────────────────── */
+  openMerge() {
+    const groupId = Auth.getGroupId();
+    const players = DB.getPlayers(groupId).sort((a, b) => a.name.localeCompare(b.name));
+    if (players.length < 2) { Toast.warning('Necesitas al menos 2 jugadores para fusionar.'); return; }
+
+    const opts = players.map(p => `<option value="${p.id}">${Utils.escHtml(p.name)}</option>`).join('');
+
+    App.openModal({
+      title: '🔀 Fusionar Jugadores',
+      body: `
+        <p class="text-muted text-sm" style="margin-bottom:16px">
+          Selecciona dos jugadores que sean la misma persona. Todas sus partidas se unificarán bajo el nombre que elijas conservar. El otro perfil quedará eliminado.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="form-group">
+            <label class="form-label">Jugador A</label>
+            <select id="merge-p1" class="form-select" onchange="PlayersPage._renderMergePreview()">
+              <option value="">— Seleccionar —</option>${opts}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jugador B</label>
+            <select id="merge-p2" class="form-select" onchange="PlayersPage._renderMergePreview()">
+              <option value="">— Seleccionar —</option>${opts}
+            </select>
+          </div>
+        </div>
+        <div id="merge-preview"></div>
+      `,
+      footer: `
+        <button class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="PlayersPage._confirmMerge()">🔀 Fusionar</button>
+      `
+    }, 'modal-lg');
+  },
+
+  _renderMergePreview() {
+    const id1 = document.getElementById('merge-p1')?.value;
+    const id2 = document.getElementById('merge-p2')?.value;
+    const preview = document.getElementById('merge-preview');
+    if (!preview) return;
+    if (!id1 || !id2 || id1 === id2) {
+      preview.innerHTML = id1 && id2 && id1 === id2
+        ? `<div class="text-danger text-sm" style="text-align:center">⚠️ Debes seleccionar dos jugadores distintos.</div>`
+        : '';
+      return;
+    }
+    const groupId = Auth.getGroupId();
+    const st1 = DB.getPlayerStats(id1, groupId);
+    const st2 = DB.getPlayerStats(id2, groupId);
+    const p1 = DB.getPlayerById(id1);
+    const p2 = DB.getPlayerById(id2);
+
+    const card = (p, st, key) => `
+      <div style="background:var(--bg-elevated);border-radius:10px;padding:14px;text-align:center;cursor:pointer;border:2px solid transparent;transition:border .2s"
+           id="merge-pick-${key}" onclick="PlayersPage._selectMergeKeep('${p.id}','${key}')">
+        <div class="avatar avatar-lg" style="background:${Utils.avatarColor(p.name)};margin:0 auto 8px">${Utils.initials(p.name)}</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:6px">${Utils.escHtml(p.name)}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">
+          <div style="background:var(--bg-card);border-radius:6px;padding:6px">
+            <div style="font-weight:800;color:var(--accent-success);font-size:1rem">${st.wins}</div><div class="text-xs text-muted">V</div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:6px;padding:6px">
+            <div style="font-weight:800;color:var(--accent-danger);font-size:1rem">${st.losses}</div><div class="text-xs text-muted">D</div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:6px;padding:6px">
+            <div style="font-weight:800;color:var(--accent-primary);font-size:1rem">${st.played}</div><div class="text-xs text-muted">PJ</div>
+          </div>
+        </div>
+        <div style="font-size:0.85rem;color:var(--accent-primary);font-weight:600">Efectividad: ${st.eff}%</div>
+        <div style="margin-top:10px">
+          <span id="merge-pick-label-${key}" class="badge" style="font-size:0.75rem">Click para conservar este nombre</span>
+        </div>
+      </div>`;
+
+    preview.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:14px">
+        ${card(p1, st1, 'A')}
+        <div style="text-align:center;font-size:1.4rem;color:var(--text-muted)">🔀</div>
+        ${card(p2, st2, 'B')}
+      </div>
+      <div id="merge-keep-info" style="text-align:center;font-size:0.85rem;color:var(--text-muted)">👆 Haz click en el jugador cuyo <b>nombre</b> quieres conservar</div>
+    `;
+    // Guardar estado
+    preview.dataset.id1 = id1;
+    preview.dataset.id2 = id2;
+    preview.dataset.keepId = '';
+  },
+
+  _selectMergeKeep(keepId, key) {
+    const preview = document.getElementById('merge-preview');
+    if (!preview) return;
+    preview.dataset.keepId = keepId;
+    // Resaltar el seleccionado
+    ['A','B'].forEach(k => {
+      const card = document.getElementById(`merge-pick-${k}`);
+      const label = document.getElementById(`merge-pick-label-${k}`);
+      if (!card || !label) return;
+      if (k === key) {
+        card.style.borderColor = 'var(--accent-primary)';
+        label.textContent = '✅ Este nombre se conservará';
+        label.style.background = 'var(--accent-primary)';
+        label.style.color = '#fff';
+      } else {
+        card.style.borderColor = 'transparent';
+        label.textContent = 'Será eliminado';
+        label.style.background = 'var(--accent-danger)';
+        label.style.color = '#fff';
+      }
+    });
+    const keepName = DB.getPlayerById(keepId)?.name || '';
+    const info = document.getElementById('merge-keep-info');
+    if (info) info.innerHTML = `✅ Se conservará el nombre: <b>${Utils.escHtml(keepName)}</b>. Las partidas de ambos perfiles quedarán unificadas.`;
+  },
+
+  _confirmMerge() {
+    const preview = document.getElementById('merge-preview');
+    if (!preview) return;
+    const id1 = preview.dataset.id1;
+    const id2 = preview.dataset.id2;
+    const keepId = preview.dataset.keepId;
+
+    if (!id1 || !id2 || id1 === id2) { Toast.error('Selecciona dos jugadores distintos.'); return; }
+    if (!keepId) { Toast.warning('Debes elegir qué nombre conservar (haz click en uno de los jugadores).'); return; }
+
+    const removeId = keepId === id1 ? id2 : id1;
+    const keepPlayer = DB.getPlayerById(keepId);
+    const removePlayer = DB.getPlayerById(removeId);
+
+    App.confirmDialog(
+      '⚠️ Confirmar Fusión',
+      `Se van a unificar:<br><br>
+       <b>${Utils.escHtml(keepPlayer?.name)}</b> + <b>${Utils.escHtml(removePlayer?.name)}</b><br><br>
+       Todas las partidas de <b>${Utils.escHtml(removePlayer?.name)}</b> pasarán a contabilizarse bajo <b>${Utils.escHtml(keepPlayer?.name)}</b>.
+       El perfil de <b>${Utils.escHtml(removePlayer?.name)}</b> será <span style="color:var(--accent-danger)">eliminado permanentemente</span>.<br><br>
+       ¿Confirmas?`,
+      () => {
+        this._executeMerge(keepId, removeId);
+      }
+    );
+  },
+
+  _executeMerge(keepId, removeId) {
+    const groupId = Auth.getGroupId();
+    const matches = DB.getMatches(groupId);
+    let updatedCount = 0;
+
+    matches.forEach(m => {
+      let changed = false;
+      const upd = {};
+
+      // Reemplazar en team1
+      if (m.team1.player1 === removeId || m.team1.player2 === removeId) {
+        upd.team1 = { ...m.team1 };
+        if (upd.team1.player1 === removeId) upd.team1.player1 = keepId;
+        if (upd.team1.player2 === removeId) upd.team1.player2 = keepId;
+        changed = true;
+      }
+      // Reemplazar en team2
+      if (m.team2.player1 === removeId || m.team2.player2 === removeId) {
+        upd.team2 = { ...m.team2 };
+        if (upd.team2.player1 === removeId) upd.team2.player1 = keepId;
+        if (upd.team2.player2 === removeId) upd.team2.player2 = keepId;
+        changed = true;
+      }
+
+      if (changed) {
+        DB.updateMatch(m.id, upd);
+        updatedCount++;
+      }
+    });
+
+    // Eliminar el jugador duplicado
+    DB.deletePlayer(removeId);
+    DB._invalidateStatsCache(groupId);
+
+    App.closeModal();
+    Toast.success(`✅ Fusión completada. ${updatedCount} partidas actualizadas.`);
+    this.loadGrid();
+  },
+
 
   confirmDelete(id) {
     const p = DB.getPlayerById(id);
