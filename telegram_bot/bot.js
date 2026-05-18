@@ -160,10 +160,23 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
     const text = await callGroq(prompt, base64Image);
     console.log('✅ Groq respondió. Respuesta:', text);
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Sanitizar la respuesta de la IA: quitar bloques markdown (```json...```)
+    // y cualquier backtick suelto que rompa JSON.parse()
+    let cleanText = text
+      .replace(/```(?:json)?/gi, '')  // quita apertura de bloque de código
+      .replace(/```/g, '')            // quita cierre de bloque de código
+      .replace(/`/g, "'");            // reemplaza backticks sueltos por comilla simple
+
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No se detectó formato JSON en la respuesta de la IA');
 
-    const data = JSON.parse(jsonMatch[0]);
+    let data;
+    try {
+      data = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      console.error('❌ JSON inválido recibido de Groq:\n', jsonMatch[0]);
+      throw new Error(`La IA devolvió un JSON inválido: ${parseErr.message}`);
+    }
     if (!data.partidas || data.partidas.length === 0) {
       return ctx.reply('❌ No pude encontrar partidas claras en esta foto.');
     }
