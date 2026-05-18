@@ -71,7 +71,10 @@ db.collection('groups').limit(1).get()
   });
 
 // ─── 3. INICIALIZAR GROQ ──────────────────────────────────────
-const groq = new Groq({ apiKey: GROQ_API_KEY });
+const groq = new Groq({ 
+  apiKey: GROQ_API_KEY,
+  maxRetries: 0 // <-- Desactiva reintentos automáticos para no colgar el bot en errores 429
+});
 
 async function callGroq(prompt, base64Image) {
   const chatCompletion = await groq.chat.completions.create({
@@ -203,8 +206,8 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
     const findId = (name, num) => {
       const p = players.find(x =>
         (num && String(x.alias) === String(num)) ||
-        (name && x.name.toLowerCase() === name.toLowerCase()) ||
-        (name && x.alias?.toLowerCase() === name.toLowerCase())
+        (name && x.name && x.name.toLowerCase() === name.toLowerCase()) ||
+        (name && x.alias && x.alias.toLowerCase() === name.toLowerCase())
       );
       return p ? p.id : null;
     };
