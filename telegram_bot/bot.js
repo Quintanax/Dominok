@@ -154,27 +154,39 @@ Devuelve SOLO un JSON con esta estructura exacta:
   ]
 }
 
-REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la imagen, NUNCA los +/-2 de los lados.`;
+REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la imagen, NUNCA los +/-2 de los lados.
+IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones), SOLO EL OBJETO JSON PURO.`;
 
     console.log('🤖 Enviando imagen a Groq...');
     const text = await callGroq(prompt, base64Image);
     console.log('✅ Groq respondió. Respuesta:', text);
 
-    // Sanitizar la respuesta de la IA: quitar bloques markdown (```json...```)
-    // y cualquier backtick suelto que rompa JSON.parse()
-    let cleanText = text
-      .replace(/```(?:json)?/gi, '')  // quita apertura de bloque de código
-      .replace(/```/g, '')            // quita cierre de bloque de código
-      .replace(/`/g, "'");            // reemplaza backticks sueltos por comilla simple
+    // Extractor de JSON inteligente
+    let jsonString = '';
+    const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    
+    if (mdMatch) {
+      // Si la IA usó un bloque markdown, tomamos exactamente el contenido interno
+      jsonString = mdMatch[1];
+    } else {
+      // Si no usó markdown, extraemos estrictamente desde la primera { hasta la última }
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonString = text.substring(firstBrace, lastBrace + 1);
+      } else {
+        jsonString = text;
+      }
+    }
 
-    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No se detectó formato JSON en la respuesta de la IA');
+    // Limpiamos los backticks perdidos por seguridad
+    jsonString = jsonString.replace(/`/g, "'");
 
     let data;
     try {
-      data = JSON.parse(jsonMatch[0]);
+      data = JSON.parse(jsonString);
     } catch (parseErr) {
-      console.error('❌ JSON inválido recibido de Groq:\n', jsonMatch[0]);
+      console.error('❌ JSON inválido recibido de Groq:\n', jsonString);
       throw new Error(`La IA devolvió un JSON inválido: ${parseErr.message}`);
     }
     if (!data.partidas || data.partidas.length === 0) {
