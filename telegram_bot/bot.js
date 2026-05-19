@@ -73,11 +73,19 @@ db.collection('groups').limit(1).get()
 // ─── 3. INICIALIZAR GROQ ──────────────────────────────────────
 const groq = new Groq({ 
   apiKey: GROQ_API_KEY,
-  maxRetries: 0 // <-- Desactiva reintentos automáticos para no colgar el bot en errores 429
+  maxRetries: 0,    // Sin reintentos automáticos
+  timeout: 30000    // Timeout de 30 segundos para no quedarse colgado
 });
 
+// Wrapper con timeout doble de seguridad (Promise.race)
+const GROQ_TIMEOUT_MS = 30000;
+
 async function callGroq(prompt, base64Image) {
-  const chatCompletion = await groq.chat.completions.create({
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('⏱ La IA tardó demasiado (>30s). Inténtalo de nuevo.')), GROQ_TIMEOUT_MS)
+  );
+
+  const groqPromise = groq.chat.completions.create({
     messages: [
       {
         role: 'user',
@@ -97,6 +105,8 @@ async function callGroq(prompt, base64Image) {
     stream: false,
     stop: null
   });
+
+  const chatCompletion = await Promise.race([groqPromise, timeoutPromise]);
   return chatCompletion.choices[0].message.content;
 }
 
