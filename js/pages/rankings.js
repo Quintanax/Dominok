@@ -2,7 +2,7 @@
    RANKINGS PAGE — Redesigned v2
    ========================================= */
 const RankingsPage = {
-  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null, mobileTab: 'individual', minPlayed: 0 },
+  state: { tab: 'local', sort: 'eff', dir: 'desc', expanded: null, mobileTab: 'individual', minPlayed: 3 },
 
   render() {
     return `
