@@ -5,3 +5,4 @@ npm-debug.log
 telegram_bot/serviceAccountKey.json
 
 .vercel
+.env*.local
