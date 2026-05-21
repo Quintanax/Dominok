@@ -372,8 +372,15 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
       saved++;
     }
     App.closeModal();
-    if (saved > 0) Toast.success(`✅ ${saved} partidas guardadas correctamente.`);
-    if (typeof MatchesPage !== 'undefined') MatchesPage.loadTable();
+    if (saved > 0) {
+      // ⚠️ FIX: invalidar caché de stats para que el ranking refleje los nuevos resultados
+      const groupId = Auth.getGroupId();
+      if (typeof DB !== 'undefined' && DB._invalidateStatsCache) DB._invalidateStatsCache(groupId);
+      Toast.success(`✅ ${saved} partidas guardadas correctamente.`);
+    }
+    if (typeof MatchesPage !== 'undefined' && App.currentPage === 'matches') MatchesPage.loadTable();
+    // Refrescar ranking si está abierto
+    if (typeof RankingsPage !== 'undefined' && App.currentPage === 'rankings') RankingsPage.renderTab();
   },
 
   _matchPlayer(name, players) {

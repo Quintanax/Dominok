@@ -306,6 +306,8 @@ const ImportPage = {
 
     // Restaurar, persistir y sincronizar UNA sola vez al final
     DB.save = originalSave;
+    // ⚠️ FIX: invalidar caché de stats para que el ranking refleje las nuevas partidas
+    DB._invalidateStatsCache(groupId);
     DB.save();
     if (typeof CloudDB !== 'undefined') CloudDB.syncToCloud();
     // ─────────────────────────────────────────────────────────────
