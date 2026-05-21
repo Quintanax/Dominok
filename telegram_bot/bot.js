@@ -212,14 +212,62 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
     const groupData = doc.exists ? doc.data() : { players: [] };
     const players = groupData.players || [];
 
+    // ── Utilidades Fuzzy Match ──
+    const normalizeName = (str) => {
+      if (!str) return '';
+      return str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    };
+    const levenshtein = (a, b) => {
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      const matrix = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+            );
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    };
+
     // ── Resolver ID de jugador por nombre o alias numérico ──
     const findId = (name, num) => {
-      const p = players.find(x =>
+      if (!name && !num) return null;
+      const qNorm = normalizeName(name);
+      
+      // 1. Alias numérico o exacto
+      let p = players.find(x =>
         (num && String(x.alias) === String(num)) ||
-        (name && x.name && x.name.toLowerCase() === name.toLowerCase()) ||
-        (name && x.alias && x.alias.toLowerCase() === name.toLowerCase())
+        (name && x.name && normalizeName(x.name) === qNorm) ||
+        (name && x.alias && String(x.alias).split(',').map(a=>normalizeName(a)).includes(qNorm)) ||
+        (name && Array.isArray(x.aliases) && x.aliases.map(a=>normalizeName(a)).includes(qNorm))
       );
-      return p ? p.id : null;
+      if (p) return p.id;
+
+      // 2. Fuzzy Match si no se encontró exacto (solo si hay nombre)
+      if (name && qNorm.length > 2) {
+        let bestMatch = null;
+        let minDistance = Infinity;
+        players.forEach(x => {
+          const distName = levenshtein(qNorm, normalizeName(x.name));
+          if (distName < minDistance) { minDistance = distName; bestMatch = x; }
+          const aliases = Array.isArray(x.aliases) ? x.aliases : (x.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+          aliases.forEach(a => {
+            const distAlias = levenshtein(qNorm, normalizeName(a));
+            if (distAlias < minDistance) { minDistance = distAlias; bestMatch = x; }
+          });
+        });
+        if (minDistance <= 2) return bestMatch.id;
+      }
+      return null;
     };
 
     const newMatches = data.partidas.map(p => {

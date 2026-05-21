@@ -268,6 +268,12 @@ window.CloudDB = {
       ) && self._normalize(p.name).length > 2);
       if (p) return p.id;
 
+      // 6) Fuzzy Match
+      if (typeof Utils !== 'undefined' && Utils.fuzzyMatch) {
+        p = Utils.fuzzyMatch(name, players);
+        if (p) return p.id;
+      }
+
       return null;
     };
 

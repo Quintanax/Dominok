@@ -77,6 +77,70 @@ const Utils = {
     return p ? (p.alias || p.name) : '?';
   },
 
+  // Normalization and Fuzzy Match
+  normalizeName(str) {
+    if (!str) return '';
+    return str.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+
+  levenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  },
+
+  fuzzyMatch(query, players, maxDistance = 2) {
+    if (!query) return null;
+    const qNorm = this.normalizeName(query);
+    
+    // 1. Exact Name/Alias Match
+    let p = players.find(x => this.normalizeName(x.name) === qNorm);
+    if (p) return p;
+    p = players.find(x => {
+      const aliases = Array.isArray(x.aliases) ? x.aliases : (x.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+      return aliases.some(a => this.normalizeName(a) === qNorm);
+    });
+    if (p) return p;
+
+    // 2. Partial/Starts With Match
+    p = players.find(x => {
+      const n = this.normalizeName(x.name);
+      return n.length > 3 && (n.startsWith(qNorm) || qNorm.startsWith(n));
+    });
+    if (p) return p;
+
+    // 3. Levenshtein Distance
+    let bestMatch = null;
+    let minDistance = Infinity;
+    players.forEach(x => {
+      const distName = this.levenshtein(qNorm, this.normalizeName(x.name));
+      if (distName < minDistance) { minDistance = distName; bestMatch = x; }
+      const aliases = Array.isArray(x.aliases) ? x.aliases : (x.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+      aliases.forEach(a => {
+        const distAlias = this.levenshtein(qNorm, this.normalizeName(a));
+        if (distAlias < minDistance) { minDistance = distAlias; bestMatch = x; }
+      });
+    });
+
+    if (minDistance <= maxDistance) return bestMatch;
+    return null;
+  },
+
   // Debounce
   debounce(fn, delay = 300) {
     let timer;

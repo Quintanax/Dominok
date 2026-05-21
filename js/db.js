@@ -75,7 +75,21 @@ const DB = {
       let changed = false;
       const checkAndFix = (team, pNum) => {
         const id = team[`player${pNum}`];
+        const name = team[`player${pNum}Name`];
+
+        // 1) Handle completely orphaned match (id is null but name exists)
+        if (!id && name) {
+          const activePlayers = this._store.players.filter(x => x.active && x.groupId === m.groupId);
+          const newP = typeof Utils !== 'undefined' && Utils.fuzzyMatch ? Utils.fuzzyMatch(name, activePlayers) : null;
+          if (newP) {
+            team[`player${pNum}`] = newP.id;
+            changed = true;
+          }
+          return;
+        }
+
         if (!id) return;
+
         const p = this._store.players.find(x => x.id === id);
         if (p && !p.active) {
           // Si sabemos con quién se fusionó
@@ -87,18 +101,11 @@ const DB = {
               return;
             }
           }
-          // Si no, intentamos emparejar por nombre o alias
-          const name = team[`player${pNum}Name`] || p.name;
-          if (name) {
-            const q = name.trim().toLowerCase();
+          // Si no, intentamos emparejar por nombre o alias (fuzzy)
+          const searchName = name || p.name;
+          if (searchName) {
             const activePlayers = this._store.players.filter(x => x.active && x.groupId === m.groupId);
-            let newP = activePlayers.find(x => x.name && x.name.trim().toLowerCase() === q);
-            if (!newP) {
-              newP = activePlayers.find(x => {
-                const aliases = Array.isArray(x.aliases) ? x.aliases : (x.alias || '').split(',').map(a => a.trim()).filter(Boolean);
-                return aliases.some(a => a.toLowerCase() === q);
-              });
-            }
+            const newP = typeof Utils !== 'undefined' && Utils.fuzzyMatch ? Utils.fuzzyMatch(searchName, activePlayers) : null;
             if (newP) {
               team[`player${pNum}`] = newP.id;
               changed = true;

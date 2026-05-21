@@ -13,6 +13,7 @@ const MatchesPage = {
           <div class="page-header-sub">Gestión y registro de partidas</div>
         </div>
         <div class="page-header-actions">
+          <button id="btn-repair-names" class="btn btn-ghost btn-sm" style="color:var(--accent-danger); display:none" onclick="MatchesPage.openRepairModal()" title="Reparar Nombres OCR">🛠 Reparar Nombres</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--accent-warning)" onclick="MatchesPage.detectDuplicates()" title="Limpiar Duplicados">🧹 Limpiar Duplicados</button>
           <button class="btn btn-ghost btn-sm" onclick="MatchesPage.exportMatches()" title="Exportar">⬇</button>
           <button class="btn btn-secondary btn-sm" onclick="GeminiOCR.openUploadModal()" title="Cargar imagen">📷</button>
@@ -43,7 +44,116 @@ const MatchesPage = {
     </div>`;
   },
 
-  afterRender() { this.loadTable(); },
+  afterRender() { this.loadTable(); this.checkOrphans(); },
+
+  checkOrphans() {
+    const btn = document.getElementById('btn-repair-names');
+    if (!btn) return;
+    const orphans = this.getOrphanNames();
+    if (orphans.length > 0) {
+      btn.style.display = 'inline-flex';
+      btn.innerHTML = `🛠 Reparar Nombres <span class="badge" style="margin-left:4px">${orphans.length}</span>`;
+    } else {
+      btn.style.display = 'none';
+    }
+  },
+
+  getOrphanNames() {
+    const groupId = Auth.getGroupId();
+    const matches = DB.getMatches(groupId);
+    const orphans = new Set();
+    
+    matches.forEach(m => {
+      if (!m.team1.player1 && m.team1.player1Name) orphans.add(m.team1.player1Name);
+      if (!m.team1.player2 && m.team1.player2Name) orphans.add(m.team1.player2Name);
+      if (!m.team2.player1 && m.team2.player1Name) orphans.add(m.team2.player1Name);
+      if (!m.team2.player2 && m.team2.player2Name) orphans.add(m.team2.player2Name);
+    });
+    
+    return Array.from(orphans).sort();
+  },
+
+  openRepairModal() {
+    const orphans = this.getOrphanNames();
+    if (orphans.length === 0) {
+      Toast.success('No hay nombres huérfanos que reparar.');
+      this.checkOrphans();
+      return;
+    }
+    
+    const players = DB.getPlayers(Auth.getGroupId());
+    const playerOptions = players.map(p => `<option value="${p.id}">${Utils.escHtml(p.name)}</option>`).join('');
+    
+    const orphanRow = orphans[0]; // Repair one by one
+    
+    App.openModal({
+      title: '🛠 Reparar Nombre de Jugador',
+      body: `
+        <div style="margin-bottom:16px; font-size:0.95rem; color:var(--text-secondary)">
+          Se ha encontrado un nombre importado por foto que no coincide con ningún jugador registrado. 
+          Selecciona el jugador correcto y el sistema aprenderá a reconocerlo la próxima vez.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre del OCR (No reconocido)</label>
+          <input type="text" class="form-input" value="${Utils.escHtml(orphanRow)}" disabled style="color:var(--accent-danger); font-weight:bold; background:rgba(255,0,0,0.05)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jugador Real (Registrado)</label>
+          <select id="repair-player-select" class="form-select">
+            <option value="" disabled selected>-- Seleccionar Jugador --</option>
+            ${playerOptions}
+          </select>
+        </div>
+        <div style="font-size:0.85rem; color:var(--accent-primary); margin-top:12px; background:rgba(108,99,255,0.1); padding:8px; border-radius:6px;">
+          ℹ️ Al guardar, se corregirán todas las partidas con este nombre y se agregará como alias al jugador seleccionado.
+        </div>
+      `,
+      footer: `
+        <button type="button" class="btn btn-ghost" onclick="App.closeModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="MatchesPage.applyRepair('${Utils.escHtml(orphanRow).replace(/'/g, "\\'")}')">💾 Guardar y Reparar</button>
+      `
+    });
+  },
+
+  applyRepair(orphanName) {
+    const select = document.getElementById('repair-player-select');
+    const playerId = select.value;
+    if (!playerId) {
+      Toast.error('Debes seleccionar un jugador.');
+      return;
+    }
+    
+    const groupId = Auth.getGroupId();
+    const player = DB.getPlayerById(playerId);
+    
+    // 1. Añadir como alias al jugador
+    let aliasesArray = Array.isArray(player.aliases) ? player.aliases : (player.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+    if (!aliasesArray.includes(orphanName)) {
+      aliasesArray.push(orphanName);
+      DB.updatePlayer(playerId, { 
+        aliases: aliasesArray, 
+        alias: aliasesArray.join(', ') // Backwards compatibility
+      });
+    }
+
+    // 2. Ejecutar auto-reparación
+    // Como el jugador ya tiene el alias, _autoRepairOrphanedMatches lo encontrará y reparará
+    DB._autoRepairOrphanedMatches();
+    
+    if (typeof CloudDB !== 'undefined') CloudDB.syncToCloud();
+    
+    App.closeModal();
+    Toast.success(`El nombre "${orphanName}" fue asignado a ${player.name} correctamente.`);
+    
+    this.loadTable();
+    this.checkOrphans();
+    
+    // Si quedan más huérfanos, reabrir el modal
+    setTimeout(() => {
+      const remaining = this.getOrphanNames();
+      if (remaining.length > 0) this.openRepairModal();
+    }, 500);
+  },
 
   detectDuplicates() {
     const groupId = Auth.getGroupId();
@@ -248,9 +358,13 @@ const MatchesPage = {
   },
 
   _matchForm(match, players) {
-    const sel = (selected) => players.map(p =>
-      `<option value="${p.id}" ${selected === p.id ? 'selected' : ''}>${Utils.escHtml(p.name)} (${Utils.escHtml(p.alias || '—')})</option>`
-    ).join('');
+    const sel = (selected) => {
+      let html = `<option value="" disabled ${!selected ? 'selected' : ''}>-- Seleccionar Jugador --</option>`;
+      html += players.map(p =>
+        `<option value="${p.id}" ${selected === p.id ? 'selected' : ''}>${Utils.escHtml(p.name)} (${Utils.escHtml(p.alias || '—')})</option>`
+      ).join('');
+      return html;
+    };
     const isEdit = !!match;
 
     return {
