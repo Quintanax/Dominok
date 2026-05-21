@@ -219,16 +219,27 @@ window.CloudDB = {
 
   // Resolve player names in Telegram matches to local player IDs.
   // Tries exact name match, then alias match (case-insensitive).
+  // Normaliza texto quitando acentos para comparación fuzzy
+  _normalize(str) {
+    if (!str) return '';
+    return str.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+
   _resolvePlayerIdsInMatch(match, groupId) {
     const players = DB.getPlayers(groupId);
+    const self = this;
 
     const findId = (name) => {
       if (!name) return null;
       const q = name.trim().toLowerCase();
+      const qNorm = self._normalize(name);
+
       // 1) Exact name match
       let p = players.find(p => p.name && p.name.trim().toLowerCase() === q);
       if (p) return p.id;
-      // 2) Alias match (aliases can be an array or a comma-separated string)
+
+      // 2) Alias exact match
       p = players.find(p => {
         const aliases = Array.isArray(p.aliases)
           ? p.aliases
@@ -236,6 +247,27 @@ window.CloudDB = {
         return aliases.some(a => a.toLowerCase() === q);
       });
       if (p) return p.id;
+
+      // 3) Accent-normalized name match (handles Ó vs O, É vs E, etc.)
+      p = players.find(p => p.name && self._normalize(p.name) === qNorm);
+      if (p) return p.id;
+
+      // 4) Accent-normalized alias match
+      p = players.find(p => {
+        const aliases = Array.isArray(p.aliases)
+          ? p.aliases
+          : (p.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+        return aliases.some(a => self._normalize(a) === qNorm);
+      });
+      if (p) return p.id;
+
+      // 5) Partial name match (starts with)
+      p = players.find(p => p.name && (
+        self._normalize(p.name).startsWith(qNorm) ||
+        qNorm.startsWith(self._normalize(p.name))
+      ) && self._normalize(p.name).length > 2);
+      if (p) return p.id;
+
       return null;
     };
 
@@ -335,6 +367,12 @@ window.CloudDB = {
         const cm = change.doc.data();
         cm.id = change.doc.id;
         if (deletedIds.includes(cm.id)) return;
+
+        // ⚠️ FIX: Forzar groupId correcto — el bot puede guardar con un groupId
+        // diferente (ej: 'dominostats_demo_group'), pero la partida ya está en
+        // la subcolección correcta del grupo del usuario. Sin esto, el motor
+        // de estadísticas filtra la partida y nunca la cuenta.
+        cm.groupId = groupId;
 
         this._resolvePlayerIdsInMatch(cm, groupId);
 
