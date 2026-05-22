@@ -1061,7 +1061,7 @@ const DB = {
         uniquePartners++;
         points += 1; // first win with this partner
         if (winsWithPartner > 1) {
-          points += (winsWithPartner - 1) * 2.5; // additional wins
+          points += (winsWithPartner - 1) * 0.25; // additional wins
         }
       }
 

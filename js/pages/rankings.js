@@ -339,7 +339,7 @@ const RankingsPage = {
           <span>Primera victoria con una pareja</span>
         </div>
         <div class="pts-rules-item">
-          <span class="pts-rules-badge pts-badge-extra">+2.5 pts</span>
+          <span class="pts-rules-badge pts-badge-extra">+0.25 pts</span>
           <span>Cada victoria adicional con la misma pareja</span>
         </div>
         <div class="pts-rules-item">
@@ -398,7 +398,7 @@ const RankingsPage = {
                   <div class="pts-partner-list">
                     ${p.partnerDetails.map(pd => {
                       const firstPts = 1;
-                      const extraPts = pd.wins > 1 ? ((pd.wins - 1) * 2.5) : 0;
+                      const extraPts = pd.wins > 1 ? ((pd.wins - 1) * 0.25) : 0;
                       const totalPts = firstPts + extraPts;
                       const ptsStr = totalPts % 1 === 0 ? totalPts.toString() : totalPts.toFixed(1);
                       return `
