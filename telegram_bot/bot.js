@@ -270,13 +270,18 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
       return null;
     };
 
+    // Calcular la fecha basada en la hora del mensaje de Telegram (ajustada a UTC-4)
+    const messageDate = new Date(ctx.message.date * 1000);
+    messageDate.setHours(messageDate.getHours() - 4);
+    const dateStr = messageDate.toISOString().split('T')[0];
+
     const newMatches = data.partidas.map(p => {
       const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       return {
         id,
         groupId: DEFAULT_GROUP_ID,
         type: 'friendly',
-        date: new Date().toISOString().split('T')[0],
+        date: dateStr,
         team1: {
           player1: findId(p.p1_j1, p.p1_j1_num),
           player2: findId(p.p1_j2, p.p1_j2_num),
