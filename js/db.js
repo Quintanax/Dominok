@@ -988,6 +988,102 @@ const DB = {
     this.save();
   },
 
+  // === POINTS RANKING (Por Puntos) ===
+  // Scoring: first win with a given partner → +1 pt; every additional win with same partner → +2.5 pts
+  getPointsRanking(groupId, dateFrom = null, dateTo = null) {
+    const matches = this.getMatches(groupId);
+    const players = this.getPlayers(groupId);
+
+    // Build a lookup map for quick player name resolution
+    const playerMap = {};
+    players.forEach(p => { playerMap[p.id] = p; });
+
+    // Filter by date range
+    const filtered = matches.filter(m => {
+      if (!m.date) return true;
+      const d = new Date(m.date);
+      if (dateFrom && d < new Date(dateFrom)) return false;
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        if (d > end) return false;
+      }
+      return true;
+    });
+
+    // per-player accumulators
+    // winsByPartner[playerId][partnerId] = count of wins together
+    const winsByPartner = {};
+    const playedCount = {};
+    const winsCount = {};
+
+    players.forEach(p => {
+      winsByPartner[p.id] = {};
+      playedCount[p.id] = 0;
+      winsCount[p.id] = 0;
+    });
+
+    // Process chronologically (oldest first) so "first win" is correctly detected
+    const chronological = [...filtered].reverse();
+
+    for (const m of chronological) {
+      const processTeam = (teamKey) => {
+        const p1id = m[teamKey].player1;
+        const p2id = m[teamKey].player2;
+        const won = m.winner === teamKey;
+
+        [p1id, p2id].forEach(pid => {
+          if (pid && playedCount[pid] !== undefined) playedCount[pid]++;
+        });
+
+        if (!won || !p1id || !p2id) return;
+
+        [p1id, p2id].forEach((pid, idx) => {
+          if (!pid || winsByPartner[pid] === undefined) return;
+          const partnerId = idx === 0 ? p2id : p1id;
+          if (!partnerId) return;
+          winsCount[pid] = (winsCount[pid] || 0) + 1;
+          winsByPartner[pid][partnerId] = (winsByPartner[pid][partnerId] || 0) + 1;
+        });
+      };
+      processTeam('team1');
+      processTeam('team2');
+    }
+
+    // Compute points per player
+    const result = players.map(p => {
+      const partners = winsByPartner[p.id];
+      let points = 0;
+      let uniquePartners = 0;
+
+      for (const [partnerId, winsWithPartner] of Object.entries(partners)) {
+        if (winsWithPartner <= 0) continue;
+        uniquePartners++;
+        points += 1; // first win with this partner
+        if (winsWithPartner > 1) {
+          points += (winsWithPartner - 1) * 2.5; // additional wins
+        }
+      }
+
+      return {
+        id: p.id,
+        name: p.name,
+        alias: p.alias || '',
+        played: playedCount[p.id] || 0,
+        wins: winsCount[p.id] || 0,
+        uniquePartners,
+        points,
+        partnerDetails: Object.entries(partners)
+          .filter(([, w]) => w > 0)
+          .map(([pid, w]) => ({ name: playerMap[pid]?.name || pid, wins: w }))
+          .sort((a, b) => b.wins - a.wins)
+      };
+    }).filter(p => p.played > 0 || p.points > 0)
+      .sort((a, b) => b.points - a.points || b.wins - a.wins);
+
+    return result;
+  },
+
   // Generate random rotating pairs ensuring no repeated pairs when possible
   generateRotatingPairs(playerIds, existingPairHistory = []) {
     const n = playerIds.length;
