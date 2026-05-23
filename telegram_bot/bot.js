@@ -138,9 +138,18 @@ bot.on('photo', async (ctx) => {
     ctx.reply('⏳ Recibido. Analizando con Gemini 2.0 Flash (OpenRouter)...');
     console.log('📸 Foto recibida — procesando...');
 
+    // Helper para no quedarse colgado en promesas infinitas
+    const withTimeout = (promise, ms, name) => {
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`⏱ Tiempo de espera agotado en: ${name}`)), ms);
+      });
+      return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+    };
+
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-    const fileLink = await ctx.telegram.getFileLink(fileId);
-    const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
+    const fileLink = await withTimeout(ctx.telegram.getFileLink(fileId), 10000, 'Obtener link de Telegram');
+    const response = await withTimeout(axios.get(fileLink.href, { responseType: 'arraybuffer' }), 15000, 'Descargar imagen de Telegram');
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
 
     const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
@@ -178,17 +187,15 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL, SOLO EL OBJETO JSON PURO.`;
 
     console.log('🤖 Enviando imagen a OpenRouter (Gemini 2.0 Flash)...');
     const text = await callOpenRouter(prompt, base64Image);
-    console.log('✅ OpenRouter respondió. Respuesta:', text);
+    console.log('✅ OpenRouter respondió exitosamente.');
 
     // Extractor de JSON inteligente
     let jsonString = '';
     const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
     
     if (mdMatch) {
-      // Si la IA usó un bloque markdown, tomamos exactamente el contenido interno
       jsonString = mdMatch[1];
     } else {
-      // Si no usó markdown, extraemos estrictamente desde la primera { hasta la última }
       const firstBrace = text.indexOf('{');
       const lastBrace = text.lastIndexOf('}');
       if (firstBrace !== -1 && lastBrace !== -1) {
@@ -198,25 +205,26 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL, SOLO EL OBJETO JSON PURO.`;
       }
     }
 
-    // Limpiamos los backticks perdidos por seguridad
     jsonString = jsonString.replace(/`/g, "'");
 
     let data;
     try {
       data = JSON.parse(jsonString);
     } catch (parseErr) {
-      console.error('❌ JSON inválido recibido de Groq:\n', jsonString);
-      throw new Error(`La IA devolvió un JSON inválido: ${parseErr.message}`);
+      console.error('❌ JSON inválido recibido:\n', jsonString);
+      throw new Error(`La IA devolvió un JSON inválido o incompleto: ${parseErr.message}`);
     }
     if (!data.partidas || data.partidas.length === 0) {
       return ctx.reply('❌ No pude encontrar partidas claras en esta foto.');
     }
 
     // ── Cargar datos del grupo desde Firestore ───────────────
+    console.log('⏳ Consultando Firebase...');
     const groupRef = db.collection('groups').doc(DEFAULT_GROUP_ID);
-    const doc = await groupRef.get();
+    const doc = await withTimeout(groupRef.get(), 15000, 'Consultar Firestore');
     const groupData = doc.exists ? doc.data() : { players: [] };
     const players = groupData.players || [];
+    console.log(`✅ Jugadores cargados de Firebase: ${players.length}`);
 
     // ── Utilidades Fuzzy Match ──
     const normalizeName = (str) => {
