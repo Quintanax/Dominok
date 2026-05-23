@@ -2,17 +2,17 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
 const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const path = require('path');
 
 // ─── 1. CONFIGURACIÓN ──────────────────────────────────────────
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-// Si no hay key en el .env, usamos la key por defecto (igual que en el cliente web)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCJDgtsaG9eUZW0LZDTLDHq0LhRzbXVeF4';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 let DEFAULT_GROUP_ID = process.env.DEFAULT_GROUP_ID || 'dominostats_demo_group';
 
 // Validación de variables obligatorias al arrancar
 if (!TELEGRAM_TOKEN) { console.error('❌ FATAL: TELEGRAM_TOKEN no está definido en .env'); process.exit(1); }
+if (!GROQ_API_KEY) { console.error('❌ FATAL: GROQ_API_KEY no está definido en .env'); process.exit(1); }
 
 
 // ─── 2. INICIALIZAR FIREBASE ───────────────────────────────────
@@ -71,29 +71,40 @@ db.collection('groups').limit(1).get()
     console.error('Detalle:', err.message);
   });
 
-// ─── 3. INICIALIZAR GEMINI ──────────────────────────────────────
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// ─── 3. INICIALIZAR GROQ (Llama 4 Scout — modelo de visión activo) ─────────
+const groq = new Groq({
+  apiKey: GROQ_API_KEY,
+  maxRetries: 0,
+  timeout: 35000
+});
 
-const GEMINI_TIMEOUT_MS = 30000;
+const GROQ_TIMEOUT_MS = 30000;
 
-async function callGemini(prompt, base64Image) {
+async function callGroq(prompt, base64Image) {
   const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('⏱ La IA tardó demasiado (>30s). Inténtalo de nuevo.')), GEMINI_TIMEOUT_MS)
+    setTimeout(() => reject(new Error('⏱ La IA tardó demasiado (>30s). Inténtalo de nuevo.')), GROQ_TIMEOUT_MS)
   );
 
-  const imagePart = {
-    inlineData: {
-      data: base64Image,
-      mimeType: "image/jpeg"
-    }
-  };
+  const groqPromise = groq.chat.completions.create({
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          {
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${base64Image}` }
+          }
+        ]
+      }
+    ],
+    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    temperature: 0.1,
+    max_tokens: 1024
+  });
 
-  const geminiPromise = model.generateContent([prompt, imagePart]);
-
-  const result = await Promise.race([geminiPromise, timeoutPromise]);
-  const response = await result.response;
-  return response.text();
+  const chatCompletion = await Promise.race([groqPromise, timeoutPromise]);
+  return chatCompletion.choices[0].message.content;
 }
 
 // ─── 4. BOT DE TELEGRAM ───────────────────────────────────────
@@ -119,7 +130,7 @@ bot.command('group', (ctx) => {
 
 bot.on('photo', async (ctx) => {
   try {
-    ctx.reply('⏳ Recibido. Analizando con Gemini (2.0 Flash)...');
+    ctx.reply('⏳ Recibido. Analizando con Llama 4 Scout (Groq)...');
     console.log('📸 Foto recibida — procesando...');
 
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
@@ -156,9 +167,9 @@ Devuelve SOLO un JSON con esta estructura exacta:
 REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la imagen, NUNCA los +/-2 de los lados.
 IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones), SOLO EL OBJETO JSON PURO.`;
 
-    console.log('🤖 Enviando imagen a Gemini...');
-    const text = await callGemini(prompt, base64Image);
-    console.log('✅ Gemini respondió. Respuesta:', text);
+    console.log('🤖 Enviando imagen a Groq (Llama 4 Scout)...');
+    const text = await callGroq(prompt, base64Image);
+    console.log('✅ Groq respondió. Respuesta:', text);
 
     // Extractor de JSON inteligente
     let jsonString = '';
@@ -185,7 +196,7 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
     try {
       data = JSON.parse(jsonString);
     } catch (parseErr) {
-      console.error('❌ JSON inválido recibido de Gemini:\n', jsonString);
+      console.error('❌ JSON inválido recibido de Groq:\n', jsonString);
       throw new Error(`La IA devolvió un JSON inválido: ${parseErr.message}`);
     }
     if (!data.partidas || data.partidas.length === 0) {
@@ -290,7 +301,7 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
         score: { team1: p.p1_pts, team2: p.p2_pts },
         winner: p.p1_pts > p.p2_pts ? 'team1' : 'team2',
         shoes: { team1Given: 0, team2Given: 0 },
-        notes: 'Registrado vía Telegram (Gemini)'
+        notes: 'Registrado vía Telegram (Llama 4 Scout)'
       };
     });
 
