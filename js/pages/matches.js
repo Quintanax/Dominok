@@ -224,8 +224,8 @@ const MatchesPage = {
     const groupId = Auth.getGroupId();
     let matches = DB.getMatches(groupId).filter(m => m.type === 'friendly' || !m.type);
     const { filter, search } = this.state;
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+    const today = Utils.getLocalISODate();
+    const weekAgo = Utils.getLocalISODate(new Date(Date.now() - 7*86400000));
 
     if (filter === 'today') matches = matches.filter(m => m.date === today);
     if (filter === 'week') matches = matches.filter(m => m.date >= weekAgo);
@@ -382,7 +382,7 @@ const MatchesPage = {
             </div>` : `<input type="hidden" id="m-type" value="friendly" />`}
             <div class="form-group">
               <label class="form-label">Fecha</label>
-              <input type="date" id="m-date" class="form-input" value="${match?.date || new Date().toISOString().split('T')[0]}" required />
+              <input type="date" id="m-date" class="form-input" value="${match?.date || Utils.getLocalISODate()}" required />
             </div>
           </div>
 

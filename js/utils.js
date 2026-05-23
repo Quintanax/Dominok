@@ -2,11 +2,18 @@
    UTILS.JS — Utilities & Helpers
    ========================================= */
 const Utils = {
+  // Get local date string YYYY-MM-DD without UTC offset issues
+  getLocalISODate(dateObj = new Date()) {
+    const d = new Date(dateObj);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().split('T')[0];
+  },
+
   // Format date
   fmtDate(isoDate, format = 'short') {
     if (!isoDate) return '—';
     let d = new Date(isoDate);
-    // Fix: if date is YYYY-MM-DD, parse it at noon local time to avoid timezone offset pushing it to previous day
+  // Fix: if date is YYYY-MM-DD, parse it at noon local time to avoid timezone offset pushing it to previous day
     if (typeof isoDate === 'string' && isoDate.length === 10) {
       d = new Date(isoDate + 'T12:00:00');
     }
