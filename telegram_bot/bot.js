@@ -143,34 +143,38 @@ bot.on('photo', async (ctx) => {
     const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(response.data, 'binary').toString('base64');
 
-    const prompt = `Analiza esta imagen de resultados de dominó y extrae la información de la partida.
+    const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
 
-ESTRUCTURA VISUAL DE LA IMAGEN:
-1. En los extremos laterales están los jugadores con sus puntos de ranking (+2 o -2). IGNORA COMPLETAMENTE ESTOS NÚMEROS.
-2. En el centro exacto de la imagen, hay un logo "VS".
-3. Justo debajo o al lado del logo "VS", dice "Puntos Totales".
-4. Debajo de "Puntos Totales" hay dos números separados por ":" (ejemplo: 41 : 116). ESTOS SON LOS ÚNICOS PUNTOS VÁLIDOS DEL PARTIDO.
+FORMATO DE LA IMAGEN:
+La imagen muestra una pantalla de resultado de partida con este diseño:
+- Lado IZQUIERDO (banner rojo "DERROTA"): 2 jugadores perdedores con nombres, IDs numéricos y -2
+- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de dos números separados por ":" (ejemplo: 87 : 114)
+- Lado DERECHO (banner verde "VICTORIA"): 2 jugadores ganadores con nombres, IDs numéricos y +2
+
+REGLAS CRÍTICAS:
+1. Los IDs son los NÚMEROS que aparecen DEBAJO de cada nombre (ejemplo: 1151021, 5729268, 11201629, 1080144).
+2. Los PUNTOS REALES del partido son los que aparecen en el CENTRO junto a "Puntos Totales" (ejemplo: 87 y 114).
+3. Los -2 y +2 de los lados son cambios de ranking, NO son los puntos del partido. IGNÓRALOS.
 
 Devuelve SOLO un JSON con esta estructura exacta:
 {
   "partidas": [
     {
       "p1_j1": "nombre del jugador 1 (izquierda)",
-      "p1_j1_num": "número/ID debajo del nombre (ej: 3879478)",
+      "p1_j1_num": "número/ID debajo del nombre",
       "p1_j2": "nombre del jugador 2 (izquierda)",
       "p1_j2_num": "número/ID debajo del nombre",
       "p2_j1": "nombre del jugador 1 (derecha)",
       "p2_j1_num": "número/ID debajo del nombre",
       "p2_j2": "nombre del jugador 2 (derecha)",
       "p2_j2_num": "número/ID debajo del nombre",
-      "p1_pts": 41,
-      "p2_pts": 116
+      "p1_pts": 87,
+      "p2_pts": 114
     }
   ]
 }
 
-REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la imagen, NUNCA los +/-2 de los lados.
-IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones), SOLO EL OBJETO JSON PURO.`;
+IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL, SOLO EL OBJETO JSON PURO.`;
 
     console.log('🤖 Enviando imagen a OpenRouter (Gemini 2.0 Flash)...');
     const text = await callOpenRouter(prompt, base64Image);

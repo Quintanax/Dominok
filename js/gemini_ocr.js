@@ -136,39 +136,42 @@ const GeminiOCR = {
     let allDetectedPartidas = [];
     let errors = [];
 
-    const prompt = `Eres un asistente que analiza imágenes de hojas de resultados de dominó.
-Extrae TODAS las partidas que aparecen en la imagen.
+    const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
 
-MUY IMPORTANTE — CRITERIO DE IDENTIFICACIÓN:
-Cada jugador tiene su NOMBRE y debajo un NÚMERO DE ID (ejemplo: Paulo / 2561584).
-USA EL NÚMERO DE ID como identificador PRINCIPAL de cada jugador.
-Si no puedes leer el ID claramente, usa el nombre como respaldo.
+FORMATO DE LA IMAGEN:
+La imagen muestra una pantalla de resultado de partida con este diseño:
+- Lado IZQUIERDO (banner rojo "DERROTA"): 2 jugadores perdedores con nombres, IDs numéricos y -2
+- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de dos números separados por ":" (ejemplo: 87 : 114)
+- Lado DERECHO (banner verde "VICTORIA"): 2 jugadores ganadores con nombres, IDs numéricos y +2
 
-Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
+REGLAS CRÍTICAS:
+1. Los IDs son los NÚMEROS que aparecen DEBAJO de cada nombre (ejemplo: 1151021, 5729268, 11201629, 1080144).
+2. Los PUNTOS REALES del partido son los que aparecen en el CENTRO junto a "Puntos Totales" (ejemplo: 87 y 114). ESTOS son los únicos puntos válidos.
+3. Los -2 y +2 son cambios de ranking, NO son los puntos del partido. IGNÓRALOS completamente.
+4. pareja1 = el equipo de la izquierda (DERROTA), pareja2 = el equipo de la derecha (VICTORIA).
+5. Los puntos de pareja1 son el número IZQUIERDO del marcador central, los de pareja2 son el DERECHO.
+
+Devuelve ÚNICAMENTE este JSON sin texto adicional:
 {
   "partidas": [
     {
       "pareja1": {
-        "jugador1": "nombre",
-        "id1": "numero_id_del_jugador1",
-        "jugador2": "nombre",
-        "id2": "numero_id_del_jugador2",
-        "puntos": 0
+        "jugador1": "nombre del primer jugador del lado izquierdo",
+        "id1": "ID numérico debajo del nombre",
+        "jugador2": "nombre del segundo jugador del lado izquierdo",
+        "id2": "ID numérico debajo del nombre",
+        "puntos": 87
       },
       "pareja2": {
-        "jugador1": "nombre",
-        "id1": "numero_id_del_jugador1",
-        "jugador2": "nombre",
-        "id2": "numero_id_del_jugador2",
-        "puntos": 0
+        "jugador1": "nombre del primer jugador del lado derecho",
+        "id1": "ID numérico debajo del nombre",
+        "jugador2": "nombre del segundo jugador del lado derecho",
+        "id2": "ID numérico debajo del nombre",
+        "puntos": 114
       }
     }
   ]
-}
-
-El campo "puntos" debe ser el cambio de puntos (positivo para victoria, negativo para derrota).
-Si ves "+2" extrae 2, si ves "-2" extrae -2.
-Los ids son los números que aparecen debajo de cada nombre en la imagen.`;
+}`;
 
     try {
       for (let i = 0; i < this._selectedFiles.length; i++) {
