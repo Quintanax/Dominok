@@ -18,7 +18,8 @@ const HistoryPage = {
         </div>
         <div class="page-header-actions">
           <button class="btn btn-ghost btn-sm" onclick="HistoryPage.toggleFilters()" id="filters-toggle-btn">🔍 Filtros</button>
-          <button class="btn btn-ghost btn-sm" onclick="HistoryPage.exportHistory()" title="Exportar">⬇</button>
+          <button class="btn btn-ghost btn-sm" onclick="HistoryPage.exportHistory()" title="Exportar CSV">⬇ CSV</button>
+          <button class="btn btn-primary btn-sm" onclick="HistoryPage.exportPDF()" title="Exportar PDF">📄 PDF</button>
         </div>
       </div>
 
@@ -223,5 +224,91 @@ const HistoryPage = {
     }));
     Utils.exportCSV(data, 'historial.csv');
     Toast.success('Historial exportado');
+  },
+
+  exportPDF() {
+    if (typeof window.jspdf === 'undefined') {
+      Toast.error('La librería PDF aún se está cargando. Intenta en un segundo.');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'pt', 'a4'); 
+    
+    const filtered = this.getFiltered();
+    if (filtered.length === 0) {
+      Toast.error('No hay partidas para exportar');
+      return;
+    }
+    
+    let totalMatches = filtered.length;
+    let wins = 0, losses = 0, shoesGiven = 0, shoesReceived = 0;
+    
+    filtered.forEach(m => {
+        let myTeam = 'team1';
+        if (this.state.player) {
+            if (m.team2.player1 === this.state.player || m.team2.player2 === this.state.player) {
+                myTeam = 'team2';
+            }
+        }
+        const oppTeam = myTeam === 'team1' ? 'team2' : 'team1';
+        if (m.winner === myTeam) wins++;
+        else losses++;
+        
+        shoesGiven += (m.shoes?.[`${myTeam}Given`] || 0);
+        shoesReceived += (m.shoes?.[`${oppTeam}Given`] || 0);
+    });
+
+    const dateStr = (this.state.dateFrom && this.state.dateTo) 
+        ? `${Utils.fmtDate(this.state.dateFrom)} al ${Utils.fmtDate(this.state.dateTo)}`
+        : (this.state.dateFrom ? `Desde ${Utils.fmtDate(this.state.dateFrom)}` : (this.state.dateTo ? `Hasta ${Utils.fmtDate(this.state.dateTo)}` : 'Todas las fechas'));
+    
+    let playerNameStr = 'Todos los jugadores';
+    if (this.state.player) {
+        playerNameStr = Utils.playerName(this.state.player);
+    }
+    
+    let resultStr = 'Todos los resultados';
+    if (this.state.result === 'won') resultStr = 'Ganadas';
+    else if (this.state.result === 'lost') resultStr = 'Perdidas';
+    else if (this.state.result === 'shoes_given') resultStr = 'Zapatos Propinados';
+    else if (this.state.result === 'shoes_received') resultStr = 'Zapatos Recibidos';
+
+    doc.setFontSize(18);
+    doc.text('DominoStats Pro - Reporte de Historial', 40, 40);
+    
+    doc.setFontSize(11);
+    doc.text(`Jugador: ${playerNameStr}`, 40, 65);
+    doc.text(`Filtro Resultado: ${resultStr}`, 40, 80);
+    doc.text(`Fechas: ${dateStr}`, 40, 95);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Resumen: ${totalMatches} partidas encontradas`, 40, 125);
+    doc.setFont('helvetica', 'normal');
+    if (this.state.player || this.state.result) {
+        doc.text(`Victorias: ${wins} | Derrotas: ${losses} | Zapatos Dados: ${shoesGiven} | Zapatos Recibidos: ${shoesReceived}`, 40, 140);
+    }
+    
+    const tableData = filtered.map(m => {
+        const p1 = `${Utils.playerName(m.team1.player1)} & ${Utils.playerName(m.team1.player2)}`;
+        const p2 = `${Utils.playerName(m.team2.player1)} & ${Utils.playerName(m.team2.player2)}`;
+        const score = `${m.score.team1} - ${m.score.team2}`;
+        const winner = m.winner === 'team1' ? 'Pareja 1' : 'Pareja 2';
+        const type = m.type === 'tournament' ? 'Torneo' : 'Amistoso';
+        return [Utils.fmtDate(m.date), type, p1, p2, score, winner];
+    });
+    
+    doc.autoTable({
+        startY: (this.state.player || this.state.result) ? 155 : 140,
+        head: [['Fecha', 'Tipo', 'Pareja 1', 'Pareja 2', 'Puntuación', 'Ganador']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [124, 58, 237] },
+        styles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+    });
+    
+    doc.save('reporte_historial_dominostats.pdf');
+    Toast.success('PDF generado con éxito');
   }
 };
