@@ -28,13 +28,13 @@ const GeminiOCR = {
             <span>⚠️</span>
             <div>
               <strong>API Key no configurada.</strong><br>
-              <small>Ingresa tu clave de Gemini para continuar.</small>
+              <small>Ingresa tu clave de OpenRouter para continuar.</small>
             </div>
           </div>
           <div class="form-group" style="margin-bottom:16px">
-            <label class="form-label">Gemini API Key</label>
+            <label class="form-label">OpenRouter API Key</label>
             <div style="display:flex;gap:8px">
-              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="AIza..." style="flex:1" />
+              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="sk-or-v1-..." style="flex:1" />
               <button class="btn btn-secondary btn-sm" onclick="GeminiOCR._saveApiKey()">Guardar</button>
             </div>
           </div>` : ''}
@@ -70,9 +70,9 @@ const GeminiOCR = {
 
   _saveApiKey() {
     const val = document.getElementById('ocr-api-key-input')?.value?.trim();
-    if (!val || !val.startsWith('AIza')) { Toast.error('Clave no válida'); return; }
+    if (!val || !val.startsWith('sk-or-')) { Toast.error('Clave no válida. Debe empezar con sk-or-'); return; }
     this.setApiKey(val);
-    Toast.success('API Key guardada');
+    Toast.success('API Key de OpenRouter guardada');
     this.openUploadModal();
   },
 
@@ -122,7 +122,7 @@ const GeminiOCR = {
     document.getElementById('ocr-analyze-btn').disabled = true;
   },
 
-  // ─── ANÁLISIS POR LOTES ──────────────────────────────────────
+  // ─── ANÁLISIS POR LOTES (vía OpenRouter — Gemini 2.0 Flash) ─────────────
   async analyzeBatch() {
     if (this._isAnalyzing) return;
     const apiKey = this.getApiKey();
@@ -136,12 +136,7 @@ const GeminiOCR = {
     let allDetectedPartidas = [];
     let errors = [];
 
-    try {
-      const { GoogleGenerativeAI } = await import('https://esm.run/@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      const prompt = `Eres un asistente que analiza imágenes de hojas de resultados de dominó.
+    const prompt = `Eres un asistente que analiza imágenes de hojas de resultados de dominó.
 Extrae TODAS las partidas que aparecen en la imagen.
 
 MUY IMPORTANTE — CRITERIO DE IDENTIFICACIÓN:
@@ -175,6 +170,7 @@ El campo "puntos" debe ser el cambio de puntos (positivo para victoria, negativo
 Si ves "+2" extrae 2, si ves "-2" extrae -2.
 Los ids son los números que aparecen debajo de cada nombre en la imagen.`;
 
+    try {
       for (let i = 0; i < this._selectedFiles.length; i++) {
         const file = this._selectedFiles[i];
         if (status) {
@@ -182,17 +178,45 @@ Los ids son los números que aparecen debajo de cada nombre en la imagen.`;
           status.innerHTML = `
             <div class="ocr-alert ocr-alert-info">
               <div class="spinner-sm"></div>
-              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong>...<br><small>${Utils.escHtml(file.name)}</small></span>
+              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Gemini 2.0 Flash...<br><small>${Utils.escHtml(file.name)}</small></span>
             </div>`;
         }
 
         try {
           const base64Data = await this._toBase64(file);
-          const imagePart = { inlineData: { data: base64Data, mimeType: file.type || 'image/jpeg' } };
-          
-          const result = await model.generateContent([prompt, imagePart]);
-          const response = await result.response;
-          const rawText = response.text();
+          const mimeType = file.type || 'image/jpeg';
+
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'DominoStats Pro'
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.0-flash-001',
+              temperature: 0.1,
+              max_tokens: 1024,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+                  ]
+                }
+              ]
+            })
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `Error HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          const rawText = data.choices[0].message.content;
 
           // Extraer JSON — soporta markdown code fences y texto libre
           let jsonString = '';
