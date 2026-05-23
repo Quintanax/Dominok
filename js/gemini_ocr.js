@@ -142,16 +142,38 @@ const GeminiOCR = {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Eres un asistente que analiza imágenes de hojas de resultados de dominó.
-Extrae TODAS las partidas amistosas que aparecen en la imagen.
+Extrae TODAS las partidas que aparecen en la imagen.
+
+MUY IMPORTANTE — CRITERIO DE IDENTIFICACIÓN:
+Cada jugador tiene su NOMBRE y debajo un NÚMERO DE ID (ejemplo: Paulo / 2561584).
+USA EL NÚMERO DE ID como identificador PRINCIPAL de cada jugador.
+Si no puedes leer el ID claramente, usa el nombre como respaldo.
+
 Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
 {
   "partidas": [
     {
-      "pareja1": { "jugador1": "nombre", "jugador2": "nombre", "puntos": 0 },
-      "pareja2": { "jugador1": "nombre", "jugador2": "nombre", "puntos": 0 }
+      "pareja1": {
+        "jugador1": "nombre",
+        "id1": "numero_id_del_jugador1",
+        "jugador2": "nombre",
+        "id2": "numero_id_del_jugador2",
+        "puntos": 0
+      },
+      "pareja2": {
+        "jugador1": "nombre",
+        "id1": "numero_id_del_jugador1",
+        "jugador2": "nombre",
+        "id2": "numero_id_del_jugador2",
+        "puntos": 0
+      }
     }
   ]
-}`;
+}
+
+El campo "puntos" debe ser el cambio de puntos (positivo para victoria, negativo para derrota).
+Si ves "+2" extrae 2, si ves "-2" extrae -2.
+Los ids son los números que aparecen debajo de cada nombre en la imagen.`;
 
       for (let i = 0; i < this._selectedFiles.length; i++) {
         const file = this._selectedFiles[i];
@@ -213,14 +235,18 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
     const mapped = partidas.map((p, idx) => ({
       idx,
       pareja1: {
-        jugador1: this._matchPlayer(p.pareja1.jugador1, players),
-        jugador2: this._matchPlayer(p.pareja1.jugador2, players),
-        nombre1: p.pareja1.jugador1, nombre2: p.pareja1.jugador2, puntos: p.pareja1.puntos
+        jugador1: this._matchPlayer(p.pareja1.jugador1, players, p.pareja1.id1),
+        jugador2: this._matchPlayer(p.pareja1.jugador2, players, p.pareja1.id2),
+        nombre1: p.pareja1.jugador1, nombre2: p.pareja1.jugador2,
+        gameId1: p.pareja1.id1 || '', gameId2: p.pareja1.id2 || '',
+        puntos: p.pareja1.puntos
       },
       pareja2: {
-        jugador1: this._matchPlayer(p.pareja2.jugador1, players),
-        jugador2: this._matchPlayer(p.pareja2.jugador2, players),
-        nombre1: p.pareja2.jugador1, nombre2: p.pareja2.jugador2, puntos: p.pareja2.puntos
+        jugador1: this._matchPlayer(p.pareja2.jugador1, players, p.pareja2.id1),
+        jugador2: this._matchPlayer(p.pareja2.jugador2, players, p.pareja2.id2),
+        nombre1: p.pareja2.jugador1, nombre2: p.pareja2.jugador2,
+        gameId1: p.pareja2.id1 || '', gameId2: p.pareja2.id2 || '',
+        puntos: p.pareja2.puntos
       },
       fecha: today
     }));
@@ -265,6 +291,7 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
                     <div class="ocr-detected-name">
                       <span style="color:#6B7280;font-size:11px">Detectado:</span>
                       <strong style="color:#E5E7EB">${Utils.escHtml(m.pareja1.nombre1||'?')}</strong>
+                      ${m.pareja1.gameId1 ? `<span style="display:inline-block;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">ID: ${Utils.escHtml(m.pareja1.gameId1)}</span>` : ''}
                       ${autoTag(m.pareja1.jugador1)}
                     </div>
                     <select class="form-select ocr-select ${m.pareja1.jugador1?'select-ok':'select-warn'}" id="ocr-p1-j1-${i}">
@@ -276,6 +303,7 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
                     <div class="ocr-detected-name">
                       <span style="color:#6B7280;font-size:11px">Detectado:</span>
                       <strong style="color:#E5E7EB">${Utils.escHtml(m.pareja1.nombre2||'?')}</strong>
+                      ${m.pareja1.gameId2 ? `<span style="display:inline-block;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">ID: ${Utils.escHtml(m.pareja1.gameId2)}</span>` : ''}
                       ${autoTag(m.pareja1.jugador2)}
                     </div>
                     <select class="form-select ocr-select ${m.pareja1.jugador2?'select-ok':'select-warn'}" id="ocr-p1-j2-${i}">
@@ -301,6 +329,7 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
                     <div class="ocr-detected-name">
                       <span style="color:#6B7280;font-size:11px">Detectado:</span>
                       <strong style="color:#E5E7EB">${Utils.escHtml(m.pareja2.nombre1||'?')}</strong>
+                      ${m.pareja2.gameId1 ? `<span style="display:inline-block;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">ID: ${Utils.escHtml(m.pareja2.gameId1)}</span>` : ''}
                       ${autoTag(m.pareja2.jugador1)}
                     </div>
                     <select class="form-select ocr-select ${m.pareja2.jugador1?'select-ok':'select-warn'}" id="ocr-p2-j1-${i}">
@@ -312,6 +341,7 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
                     <div class="ocr-detected-name">
                       <span style="color:#6B7280;font-size:11px">Detectado:</span>
                       <strong style="color:#E5E7EB">${Utils.escHtml(m.pareja2.nombre2||'?')}</strong>
+                      ${m.pareja2.gameId2 ? `<span style="display:inline-block;background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px">ID: ${Utils.escHtml(m.pareja2.gameId2)}</span>` : ''}
                       ${autoTag(m.pareja2.jugador2)}
                     </div>
                     <select class="form-select ocr-select ${m.pareja2.jugador2?'select-ok':'select-warn'}" id="ocr-p2-j2-${i}">
@@ -383,8 +413,25 @@ Devuelve SOLAMENTE un JSON válido con esta estructura exacta:
     if (typeof RankingsPage !== 'undefined' && App.currentPage === 'rankings') RankingsPage.renderTab();
   },
 
-  _matchPlayer(name, players) {
-    if (!name || !players.length) return '';
+  _matchPlayer(name, players, gameId) {
+    if (!players.length) return '';
+
+    // ── CRITERIO 1: Buscar por ID de juego (número debajo del nombre) ─────
+    if (gameId) {
+      const cleanId = String(gameId).trim();
+      const byGameId = players.find(p => {
+        // Buscar en el campo gameId del jugador
+        if (p.gameId && String(p.gameId).trim() === cleanId) return true;
+        // Buscar también en aliases (por si el ID fue guardado como alias)
+        const aliases = Array.isArray(p.aliases) ? p.aliases :
+          (p.alias ? String(p.alias).split(',').map(a => a.trim()) : []);
+        return aliases.some(a => String(a).trim() === cleanId);
+      });
+      if (byGameId) return byGameId.id;
+    }
+
+    // ── CRITERIO 2: Buscar por nombre / alias (fallback) ──────────────────
+    if (!name) return '';
     const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     const target = norm(name);
     const getAliases = (p) => {

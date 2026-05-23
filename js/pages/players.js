@@ -220,9 +220,14 @@ const PlayersPage = {
         <input type="text" id="pl-name" class="form-input" value="${Utils.escHtml(player?.name||'')}" placeholder="Nombre Apellido" required />
       </div>
       <div class="form-group">
+        <label class="form-label">ID del Juego <span class="text-muted text-xs">(número que aparece debajo del nombre en las tarjetas)</span></label>
+        <input type="text" id="pl-gameid" class="form-input" value="${Utils.escHtml(player?.gameId||'')}" placeholder="Ej: 2561584" inputmode="numeric" />
+        <div class="text-xs text-muted" style="margin-top:4px">🎯 La IA usa este ID como <strong>primer criterio</strong> para identificar al jugador en fotos. Evita confusión entre jugadores con el mismo nombre.</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Alias / Apodos <span class="text-muted text-xs">(separados por coma)</span></label>
         <input type="text" id="pl-aliases" class="form-input" value="${Utils.escHtml(aliasVal)}" placeholder="Toño, Tony, El Toro..." />
-        <div class="text-xs text-muted" style="margin-top:4px">💡 La IA usará estos alias para identificar al jugador en las fotos automáticamente</div>
+        <div class="text-xs text-muted" style="margin-top:4px">💡 La IA también usará estos alias como criterio secundario</div>
       </div>
       <div class="form-group">
         <label class="form-label">Notas</label>
@@ -235,8 +240,10 @@ const PlayersPage = {
     if (!name) { Toast.error('El nombre es requerido'); return; }
     const rawAliases = document.getElementById('pl-aliases')?.value || '';
     const aliases = rawAliases.split(',').map(a => a.trim()).filter(Boolean);
+    const gameId = document.getElementById('pl-gameid')?.value.trim() || '';
     const data = {
       name,
+      gameId,
       aliases,
       alias: aliases[0] || '', // backward compat
       notes: document.getElementById('pl-notes')?.value.trim() || '',
