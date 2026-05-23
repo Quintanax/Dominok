@@ -324,7 +324,7 @@ const RankingsPage = {
           <div class="avatar avatar-md" style="background:${Utils.avatarColor(p.name)};margin:0 auto 8px;box-shadow:0 0 0 3px ${col}40">${Utils.initials(p.name)}</div>
           <div style="font-size:0.95rem;font-weight:800">${Utils.escHtml(p.name.split(' ')[0])}</div>
           <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">${p.wins}V · ${p.uniquePartners} pareja${p.uniquePartners!==1?'s':''}</div>
-          <div class="rk-podium-eff" style="color:${col}">${p.points % 1 === 0 ? p.points : p.points.toFixed(1)}<span>PTS</span></div>
+          <div class="rk-podium-eff" style="color:${col}">${p.points % 1 === 0 ? p.points : Number(p.points.toFixed(2))}<span>PTS</span></div>
         </div>`;
       }).join('')}
     </div>`;
@@ -368,7 +368,7 @@ const RankingsPage = {
           ${ranking.map((p, i) => {
             const isOpen = this.state.pointsExpanded === p.id;
             const posClass = i === 0 ? 'pts-pos-gold' : i === 1 ? 'pts-pos-silver' : i === 2 ? 'pts-pos-bronze' : '';
-            const pointsStr = p.points % 1 === 0 ? p.points.toString() : p.points.toFixed(1);
+            const pointsStr = p.points % 1 === 0 ? p.points.toString() : Number(p.points.toFixed(2)).toString();
             return `
             <tr class="pts-tr ${isOpen ? 'pts-tr-open' : ''}" onclick="RankingsPage.togglePointsExpand('${p.id}')">
               <td class="pts-td pts-td-pos">
@@ -400,7 +400,7 @@ const RankingsPage = {
                       const firstPts = 1;
                       const extraPts = pd.wins > 1 ? ((pd.wins - 1) * 0.25) : 0;
                       const totalPts = firstPts + extraPts;
-                      const ptsStr = totalPts % 1 === 0 ? totalPts.toString() : totalPts.toFixed(1);
+                      const ptsStr = totalPts % 1 === 0 ? totalPts.toString() : Number(totalPts.toFixed(2)).toString();
                       return `
                       <div class="pts-partner-item">
                         <div class="avatar avatar-xs" style="background:${Utils.avatarColor(pd.name)}">${Utils.initials(pd.name)}</div>
