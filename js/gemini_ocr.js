@@ -139,7 +139,7 @@ const GeminiOCR = {
     try {
       const { GoogleGenerativeAI } = await import('https://esm.run/@google/generative-ai');
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Eres un asistente que analiza imágenes de hojas de resultados de dominó.
 Extrae TODAS las partidas que aparecen en la imagen.
@@ -193,12 +193,29 @@ Los ids son los números que aparecen debajo de cada nombre en la imagen.`;
           const result = await model.generateContent([prompt, imagePart]);
           const response = await result.response;
           const rawText = response.text();
-          
-          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.partidas) {
-              allDetectedPartidas = allDetectedPartidas.concat(parsed.partidas);
+
+          // Extraer JSON — soporta markdown code fences y texto libre
+          let jsonString = '';
+          const mdMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/i);
+          if (mdMatch) {
+            jsonString = mdMatch[1].trim();
+          } else {
+            const firstBrace = rawText.indexOf('{');
+            const lastBrace = rawText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+              jsonString = rawText.substring(firstBrace, lastBrace + 1);
+            }
+          }
+
+          if (jsonString) {
+            try {
+              const parsed = JSON.parse(jsonString);
+              if (parsed.partidas && parsed.partidas.length > 0) {
+                allDetectedPartidas = allDetectedPartidas.concat(parsed.partidas);
+              }
+            } catch (jsonErr) {
+              console.warn('JSON parse error en archivo:', file.name, jsonErr.message);
+              errors.push(`${file.name}: JSON inválido de la IA`);
             }
           }
         } catch (fileErr) {

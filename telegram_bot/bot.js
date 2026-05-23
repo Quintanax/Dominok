@@ -98,7 +98,7 @@ async function callGroq(prompt, base64Image) {
         ]
       }
     ],
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: 'llama-3.2-11b-vision-preview',
     temperature: 0.1,
     max_tokens: 1024,
     top_p: 1,
@@ -238,21 +238,28 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones),
       return matrix[b.length][a.length];
     };
 
-    // ── Resolver ID de jugador por nombre o alias numérico ──
+    // ── Resolver ID de jugador por gameId, alias numérico o nombre ──
     const findId = (name, num) => {
       if (!name && !num) return null;
       const qNorm = normalizeName(name);
-      
-      // 1. Alias numérico o exacto
+      const cleanNum = num ? String(num).trim() : null;
+
+      // 1. Buscar por gameId (campo dedicado nuevo)
+      if (cleanNum) {
+        let p = players.find(x => x.gameId && String(x.gameId).trim() === cleanNum);
+        if (p) return p.id;
+      }
+
+      // 2. Alias numérico o nombre exacto / alias exacto
       let p = players.find(x =>
-        (num && String(x.alias) === String(num)) ||
+        (cleanNum && String(x.alias) === cleanNum) ||
         (name && x.name && normalizeName(x.name) === qNorm) ||
         (name && x.alias && String(x.alias).split(',').map(a=>normalizeName(a)).includes(qNorm)) ||
         (name && Array.isArray(x.aliases) && x.aliases.map(a=>normalizeName(a)).includes(qNorm))
       );
       if (p) return p.id;
 
-      // 2. Fuzzy Match si no se encontró exacto (solo si hay nombre)
+      // 3. Fuzzy Match si no se encontró exacto (solo si hay nombre)
       if (name && qNorm.length > 2) {
         let bestMatch = null;
         let minDistance = Infinity;
