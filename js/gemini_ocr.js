@@ -7,7 +7,7 @@ const GeminiOCR = {
 
   // ─── CONFIGURACIÓN ───────────────────────────────────────────
   getApiKey() {
-    return localStorage.getItem('gemini_ocr_api_key') || 'AIzaSyCJDgtsaG9eUZW0LZDTLDHq0LhRzbXVeF4';
+    return localStorage.getItem('gemini_ocr_api_key') || '';
   },
 
   setApiKey(key) {
