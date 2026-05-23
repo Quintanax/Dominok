@@ -2,7 +2,7 @@
    HISTORY PAGE — Redesigned v2
    ========================================= */
 const HistoryPage = {
-  state: { page: 1, player: '', type: '', dateFrom: '', dateTo: '', expanded: null, filtersOpen: false },
+  state: { page: 1, player: '', type: '', result: '', dateFrom: '', dateTo: '', expanded: null, filtersOpen: false },
 
   render() {
     const groupId = Auth.getGroupId();
@@ -38,6 +38,16 @@ const HistoryPage = {
               <option value="">Todos</option>
               <option value="friendly">Amistosos</option>
               <option value="tournament">Torneos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Resultado</label>
+            <select id="h-result" class="form-select" onchange="HistoryPage.applyFilters()">
+              <option value="">Todos</option>
+              <option value="won">🏆 Ganadas</option>
+              <option value="lost">❌ Perdidas</option>
+              <option value="shoes_given">👟 Zapatos propinados</option>
+              <option value="shoes_received">👟 Zapatos recibidos</option>
             </select>
           </div>
           <div class="form-group">
@@ -81,7 +91,7 @@ const HistoryPage = {
   getFiltered() {
     const groupId = Auth.getGroupId();
     let matches = DB.getMatches(groupId);
-    const { player, type, dateFrom, dateTo } = this.state;
+    const { player, type, result, dateFrom, dateTo } = this.state;
     if (player) matches = matches.filter(m =>
       m.team1.player1 === player || m.team1.player2 === player ||
       m.team2.player1 === player || m.team2.player2 === player
@@ -89,12 +99,29 @@ const HistoryPage = {
     if (type) matches = matches.filter(m => m.type === type);
     if (dateFrom) matches = matches.filter(m => m.date >= dateFrom);
     if (dateTo) matches = matches.filter(m => m.date <= dateTo);
+    if (result) {
+      matches = matches.filter(m => {
+        // Determine which team the selected player belongs to (team1 if no player selected)
+        let myTeam = 'team1';
+        if (player) {
+          if (m.team2.player1 === player || m.team2.player2 === player) myTeam = 'team2';
+        }
+        const oppTeam = myTeam === 'team1' ? 'team2' : 'team1';
+        const won = m.winner === myTeam;
+        if (result === 'won')           return won;
+        if (result === 'lost')          return !won;
+        if (result === 'shoes_given')   return (m.shoes?.[`${myTeam}Given`] || 0) > 0;
+        if (result === 'shoes_received') return (m.shoes?.[`${oppTeam}Given`] || 0) > 0;
+        return true;
+      });
+    }
     return matches;
   },
 
   applyFilters() {
     this.state.player = document.getElementById('h-player')?.value || '';
     this.state.type = document.getElementById('h-type')?.value || '';
+    this.state.result = document.getElementById('h-result')?.value || '';
     this.state.dateFrom = document.getElementById('h-from')?.value || '';
     this.state.dateTo = document.getElementById('h-to')?.value || '';
     this.state.page = 1;
@@ -102,8 +129,8 @@ const HistoryPage = {
   },
 
   clearFilters() {
-    this.state = { ...this.state, player: '', type: '', dateFrom: '', dateTo: '' };
-    ['h-player','h-type','h-from','h-to'].forEach(id => {
+    this.state = { ...this.state, player: '', type: '', result: '', dateFrom: '', dateTo: '' };
+    ['h-player','h-type','h-result','h-from','h-to'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });

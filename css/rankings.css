@@ -290,7 +290,7 @@
   margin-bottom: 10px;
   animation: slideDown 200ms ease;
 }
-.hs-filters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.hs-filters-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .hs-count-bar { padding: 6px 2px 8px; }
 .hs-count-text { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
 
@@ -362,8 +362,10 @@
   .hs-winner-badge { margin-top: 0; }
 }
 
+@media (max-width: 600px) {
+  .hs-filters-grid { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 400px) {
-
   .hs-filters-grid { grid-template-columns: 1fr; }
 }
 
