@@ -80,7 +80,7 @@ const groq = new Groq({
 
 const GROQ_TIMEOUT_MS = 30000;
 
-async function callGroq(prompt, imageUrl) {
+async function callGroq(prompt, base64Image) {
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('⏱ La IA tardó demasiado (>30s). Inténtalo de nuevo.')), GROQ_TIMEOUT_MS)
   );
@@ -93,7 +93,7 @@ async function callGroq(prompt, imageUrl) {
           { type: 'text', text: prompt },
           {
             type: 'image_url',
-            image_url: { url: imageUrl }
+            image_url: { url: `data:image/jpeg;base64,${base64Image}` }
           }
         ]
       }
@@ -135,8 +135,8 @@ bot.on('photo', async (ctx) => {
 
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
     const fileLink = await ctx.telegram.getFileLink(fileId);
-    const imageUrl = fileLink.href;
-    console.log('🔗 URL de imagen obtenida:', imageUrl.substring(0, 60) + '...');
+    const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
+    const base64Image = Buffer.from(response.data, 'binary').toString('base64');
 
     const prompt = `Analiza esta imagen de resultados de dominó y extrae la información de la partida.
 
@@ -168,7 +168,7 @@ REGLA DE ORO: p1_pts y p2_pts son SIEMPRE los que aparecen en el CENTRO de la im
 IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL (ni saludos, ni explicaciones), SOLO EL OBJETO JSON PURO.`;
 
     console.log('🤖 Enviando imagen a Groq (Llama 4 Scout)...');
-    const text = await callGroq(prompt, imageUrl);
+    const text = await callGroq(prompt, base64Image);
     console.log('✅ Groq respondió. Respuesta:', text);
 
     // Extractor de JSON inteligente
