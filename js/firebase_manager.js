@@ -8,6 +8,14 @@ window.CloudDB = {
   _db: null,
   _auth: null,
   _unsubscribe: null,
+  // IDs de partidas editadas localmente que el listener NO debe sobreescribir
+  // durante los próximos segundos (mientras se completa el sync a la nube).
+  _recentlyWrittenIds: new Set(),
+
+  _markLocalWrite(matchId) {
+    this._recentlyWrittenIds.add(matchId);
+    setTimeout(() => this._recentlyWrittenIds.delete(matchId), 8000);
+  },
 
   // =========================================
   // FIREBASE AUTHENTICATION (Official SDK)
@@ -384,6 +392,9 @@ window.CloudDB = {
 
         const idx = DB._store.matches.findIndex(m => m.id === cm.id);
         if (change.type === 'added' || change.type === 'modified') {
+          // Si esta partida fue editada localmente hace menos de 8 segundos,
+          // ignorar la actualización de la nube para no perder el cambio local.
+          if (this._recentlyWrittenIds.has(cm.id)) return;
           if (idx === -1) { DB._store.matches.push(cm); changed = true; }
           else if (JSON.stringify(DB._store.matches[idx]) !== JSON.stringify(cm)) { DB._store.matches[idx] = cm; changed = true; }
         } else if (change.type === 'removed') {

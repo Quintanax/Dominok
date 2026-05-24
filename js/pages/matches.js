@@ -465,8 +465,16 @@ const MatchesPage = {
       notes: document.getElementById('m-notes').value
     };
 
+    let savedMatchId = existingId;
     if (existingId) { DB.updateMatch(existingId, matchData); Toast.success('Partida actualizada'); }
-    else { DB.addMatch(matchData); Toast.success('Partida registrada'); }
+    else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; Toast.success('Partida registrada'); }
+
+    // Bloquear el listener para este ID durante 8 seg y sincronizar
+    // inmediatamente, evitando que Firestore sobreescriba el cambio local.
+    if (typeof CloudDB !== 'undefined') {
+      if (savedMatchId && CloudDB._markLocalWrite) CloudDB._markLocalWrite(savedMatchId);
+      if (CloudDB.syncToCloud) CloudDB.syncToCloud();
+    }
 
     App.closeModal();
     this.loadTable();
