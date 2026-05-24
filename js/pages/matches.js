@@ -436,13 +436,8 @@ const MatchesPage = {
     };
   },
 
-  async saveMatch(e, existingId) {
+  saveMatch(e, existingId) {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '⏳ Guardando...';
-    }
 
     const t1p1 = document.getElementById('m-t1p1').value;
     const t1p2 = document.getElementById('m-t1p2').value;
@@ -452,16 +447,8 @@ const MatchesPage = {
     const s2 = parseInt(document.getElementById('m-s2').value);
 
     const players = [t1p1, t1p2, t2p1, t2p2];
-    if (new Set(players).size < 4) { 
-      Toast.error('Los 4 jugadores deben ser diferentes.'); 
-      if (btn) { btn.disabled = false; btn.innerHTML = existingId ? '💾 Guardar' : '🎮 Registrar'; }
-      return; 
-    }
-    if (isNaN(s1) || isNaN(s2) || s1 === s2) { 
-      Toast.error('El resultado no puede ser empate.'); 
-      if (btn) { btn.disabled = false; btn.innerHTML = existingId ? '💾 Guardar' : '🎮 Registrar'; }
-      return; 
-    }
+    if (new Set(players).size < 4) { Toast.error('Los 4 jugadores deben ser diferentes.'); return; }
+    if (isNaN(s1) || isNaN(s2) || s1 === s2) { Toast.error('El resultado no puede ser empate.'); return; }
 
     let t1sh = 0, t2sh = 0;
     if (s1 > 0 && s2 === 0) t1sh = 1;
@@ -480,32 +467,32 @@ const MatchesPage = {
     };
 
     let savedMatchId = existingId;
-    if (existingId) { DB.updateMatch(existingId, matchData); Toast.success('Partida actualizada localmente'); }
-    else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; Toast.success('Partida registrada localmente'); }
+    if (existingId) { DB.updateMatch(existingId, matchData); }
+    else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; }
 
-    // Bloquear el listener para este ID durante 8 seg y hacer
-    // una actualización RÁPIDA solo de esta partida en Firebase.
-    if (typeof CloudDB !== 'undefined' && CloudDB._getDb) {
-      if (savedMatchId && CloudDB._markLocalWrite) CloudDB._markLocalWrite(savedMatchId);
-      
-      try {
-        const db = CloudDB._getDb();
-        if (db) {
-          const matchToUpload = DB._store.matches.find(m => m.id === savedMatchId);
-          if (matchToUpload) {
-            await db.collection('groups').doc(Auth.getGroupId()).collection('matches').doc(savedMatchId).set(matchToUpload, { merge: true });
-            Toast.success('✅ Guardado en la nube');
-          }
-        }
-      } catch (e) {
-        console.error('Error fast sync:', e);
-        // Fallback
-        if (CloudDB.syncToCloud) CloudDB.syncToCloud();
-      }
-    }
-
+    // Cerrar modal y actualizar vista INMEDIATAMENTE (sin esperar a la nube)
     App.closeModal();
     this.loadTable();
+    Toast.success(existingId ? '✅ Partida actualizada' : '✅ Partida registrada');
+
+    // Sincronizar solo esta partida en la nube, en segundo plano
+    if (typeof CloudDB !== 'undefined' && CloudDB._getDb && savedMatchId) {
+      if (CloudDB._markLocalWrite) CloudDB._markLocalWrite(savedMatchId);
+      const db = CloudDB._getDb();
+      if (db) {
+        const matchToUpload = DB._store.matches.find(m => m.id === savedMatchId);
+        if (matchToUpload) {
+          db.collection('groups').doc(Auth.getGroupId())
+            .collection('matches').doc(savedMatchId)
+            .set(matchToUpload, { merge: true })
+            .catch(err => {
+              console.error('Error sync partida:', err);
+              // Fallback: sincronización completa en background
+              if (CloudDB.syncToCloud) CloudDB.syncToCloud();
+            });
+        }
+      }
+    }
   },
 
   confirmDelete(id) {
