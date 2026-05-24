@@ -9,6 +9,8 @@ const RankingsPage = {
     expanded: null,
     mobileTab: 'individual',
     minPlayed: 3,
+    dateFrom: '',
+    dateTo: '',
     pointsDateFrom: '',
     pointsDateTo: '',
     pointsExpanded: null,
@@ -51,19 +53,27 @@ const RankingsPage = {
     if (!el) return;
     if (this.state.tab === 'local') {
       const mt = this.state.mobileTab || 'individual';
+      const filterBarHtml = mt !== 'points' ? `
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:var(--bg-elevated); padding:6px 10px; border-radius:var(--radius-lg);">
+          <span style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">📅 Rango:</span>
+          <input type="date" id="rk-date-from" style="padding:4px 8px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-primary); font-size:0.82rem;" value="${this.state.dateFrom || ''}" onchange="RankingsPage.applyDateFilter()">
+          <span style="color:var(--text-muted); font-size:0.85rem;">—</span>
+          <input type="date" id="rk-date-to" style="padding:4px 8px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-primary); font-size:0.82rem;" value="${this.state.dateTo || ''}" onchange="RankingsPage.applyDateFilter()">
+          ${(this.state.dateFrom || this.state.dateTo) ? `<button class="btn btn-ghost btn-sm" style="padding:3px 8px; font-size:0.8rem;" onclick="RankingsPage.clearDateFilter()">✕ Limpiar</button>` : ''}
+          <div style="display:flex; align-items:center; gap:6px; margin-left:8px; padding-left:8px; border-left:1px solid var(--border-color);">
+            <span style="font-size:0.82rem; color:var(--text-muted)">Mín. Partidas:</span>
+            <input type="number" min="0" style="width:52px; padding:4px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); text-align:center; font-size:0.82rem;" value="${this.state.minPlayed}" onchange="RankingsPage.setMinPlayed(this.value)" onkeyup="if(event.key==='Enter') RankingsPage.setMinPlayed(this.value)">
+          </div>
+        </div>` : '';
+
       el.innerHTML = `
-        <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; align-items:center;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; align-items:center;">
           <div style="display:flex;gap:8px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content">
             <button class="btn btn-sm ${mt==='individual'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
             <button class="btn btn-sm ${mt==='pairs'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
             <button class="btn btn-sm ${mt==='points'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('points')">⭐ Por Puntos</button>
           </div>
-          ${mt !== 'points' ? `
-          <div style="display:flex; align-items:center; gap:8px; background:var(--bg-elevated); padding:6px 12px; border-radius:var(--radius-lg);">
-            <span style="font-size:0.85rem; color:var(--text-muted)">Mín. Partidas:</span>
-            <input type="number" min="0" style="width:60px; padding:4px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); text-align:center;" value="${this.state.minPlayed}" onchange="RankingsPage.setMinPlayed(this.value)" onkeyup="if(event.key==='Enter') RankingsPage.setMinPlayed(this.value)">
-          </div>
-          ` : ''}
+          ${filterBarHtml}
         </div>
         <div>
           ${mt==='individual' ? this._renderPlayers() : mt==='pairs' ? this._renderPairs() : this._renderPointsRanking()}
@@ -84,6 +94,20 @@ const RankingsPage = {
   setMinPlayed(val) {
     const num = parseInt(val, 10);
     this.state.minPlayed = isNaN(num) ? 0 : num;
+    this.state.expanded = null;
+    this.renderTab();
+  },
+
+  applyDateFilter() {
+    this.state.dateFrom = document.getElementById('rk-date-from')?.value || '';
+    this.state.dateTo   = document.getElementById('rk-date-to')?.value   || '';
+    this.state.expanded = null;
+    this.renderTab();
+  },
+
+  clearDateFilter() {
+    this.state.dateFrom = '';
+    this.state.dateTo   = '';
     this.state.expanded = null;
     this.renderTab();
   },
@@ -117,7 +141,7 @@ const RankingsPage = {
   /* ── PLAYERS ────────────────────────────────── */
   _renderPlayers() {
     const groupId = Auth.getGroupId();
-    let allStats = DB.getAllPlayerStats(groupId);
+    let allStats = DB.getAllPlayerStats(groupId, this.state.dateFrom || null, this.state.dateTo || null);
     if (this.state.minPlayed > 0) {
       allStats = allStats.filter(p => p.stats.played >= this.state.minPlayed);
     }
@@ -199,7 +223,7 @@ const RankingsPage = {
   _renderPairs() {
     const groupId = Auth.getGroupId();
     const minP = this.state.minPlayed > 0 ? this.state.minPlayed : 1;
-    let pairs = DB.getBestPairs(groupId).filter(p => p.stats.played >= minP);
+    let pairs = DB.getBestPairs(groupId, this.state.dateFrom || null, this.state.dateTo || null).filter(p => p.stats.played >= minP);
 
     const validSorts = ['eff', 'wins', 'losses', 'played'];
     const currentSort = validSorts.includes(this.state.sort) ? this.state.sort : 'wins';
