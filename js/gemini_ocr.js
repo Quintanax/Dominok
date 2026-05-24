@@ -272,7 +272,7 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
 
   _showReviewModal(partidas) {
     const players = DB.getPlayers(Auth.getGroupId());
-    const today = new Date().toISOString().split('T')[0];
+    const today = typeof Utils !== 'undefined' && Utils.getLocalISODate ? Utils.getLocalISODate() : new Date().toISOString().split('T')[0];
 
     const mapped = partidas.map((p, idx) => ({
       idx,
