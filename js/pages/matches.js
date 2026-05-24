@@ -222,7 +222,7 @@ const MatchesPage = {
 
   getFiltered() {
     const groupId = Auth.getGroupId();
-    let matches = DB.getMatches(groupId).filter(m => m.type === 'friendly' || !m.type);
+    let matches = DB.getMatches(groupId);
     const { filter, search } = this.state;
     const today = Utils.getLocalISODate();
     const weekAgo = Utils.getLocalISODate(new Date(Date.now() - 7*86400000));
