@@ -436,8 +436,14 @@ const MatchesPage = {
     };
   },
 
-  saveMatch(e, existingId) {
+  async saveMatch(e, existingId) {
     e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Guardando...';
+    }
+
     const t1p1 = document.getElementById('m-t1p1').value;
     const t1p2 = document.getElementById('m-t1p2').value;
     const t2p1 = document.getElementById('m-t2p1').value;
@@ -446,8 +452,16 @@ const MatchesPage = {
     const s2 = parseInt(document.getElementById('m-s2').value);
 
     const players = [t1p1, t1p2, t2p1, t2p2];
-    if (new Set(players).size < 4) { Toast.error('Los 4 jugadores deben ser diferentes.'); return; }
-    if (isNaN(s1) || isNaN(s2) || s1 === s2) { Toast.error('El resultado no puede ser empate.'); return; }
+    if (new Set(players).size < 4) { 
+      Toast.error('Los 4 jugadores deben ser diferentes.'); 
+      if (btn) { btn.disabled = false; btn.innerHTML = existingId ? '💾 Guardar' : '🎮 Registrar'; }
+      return; 
+    }
+    if (isNaN(s1) || isNaN(s2) || s1 === s2) { 
+      Toast.error('El resultado no puede ser empate.'); 
+      if (btn) { btn.disabled = false; btn.innerHTML = existingId ? '💾 Guardar' : '🎮 Registrar'; }
+      return; 
+    }
 
     let t1sh = 0, t2sh = 0;
     if (s1 > 0 && s2 === 0) t1sh = 1;
@@ -466,14 +480,17 @@ const MatchesPage = {
     };
 
     let savedMatchId = existingId;
-    if (existingId) { DB.updateMatch(existingId, matchData); Toast.success('Partida actualizada'); }
-    else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; Toast.success('Partida registrada'); }
+    if (existingId) { DB.updateMatch(existingId, matchData); Toast.success('Partida actualizada localmente'); }
+    else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; Toast.success('Partida registrada localmente'); }
 
     // Bloquear el listener para este ID durante 8 seg y sincronizar
     // inmediatamente, evitando que Firestore sobreescriba el cambio local.
     if (typeof CloudDB !== 'undefined') {
       if (savedMatchId && CloudDB._markLocalWrite) CloudDB._markLocalWrite(savedMatchId);
-      if (CloudDB.syncToCloud) CloudDB.syncToCloud();
+      if (CloudDB.syncToCloud) {
+        await CloudDB.syncToCloud();
+        Toast.success('✅ Sincronizado a la nube');
+      }
     }
 
     App.closeModal();
