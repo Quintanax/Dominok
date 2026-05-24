@@ -139,35 +139,33 @@ const GeminiOCR = {
     const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
 
 FORMATO DE LA IMAGEN:
-La imagen muestra una pantalla de resultado de partida con este diseño:
-- Lado IZQUIERDO (banner rojo "DERROTA"): 2 jugadores perdedores con nombres, IDs numéricos y -2
-- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de dos números separados por ":" (ejemplo: 87 : 114)
-- Lado DERECHO (banner verde "VICTORIA"): 2 jugadores ganadores con nombres, IDs numéricos y +2
+- Lado IZQUIERDO: 2 jugadores (Pareja 1) con nombres, y debajo de cada nombre un número de ID (ej: 3389307, 7890807).
+- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de la puntuación final separada por ":" (ejemplo: 111 : 98).
+- Lado DERECHO: 2 jugadores (Pareja 2) con nombres, y debajo de cada nombre un número de ID.
 
 REGLAS CRÍTICAS:
-1. Los IDs son los NÚMEROS que aparecen DEBAJO de cada nombre (ejemplo: 1151021, 5729268, 11201629, 1080144).
-2. Los PUNTOS REALES del partido son los que aparecen en el CENTRO junto a "Puntos Totales" (ejemplo: 87 y 114). ESTOS son los únicos puntos válidos.
-3. Los -2 y +2 son cambios de ranking, NO son los puntos del partido. IGNÓRALOS completamente.
-4. pareja1 = el equipo de la izquierda (DERROTA), pareja2 = el equipo de la derecha (VICTORIA).
-5. Los puntos de pareja1 son el número IZQUIERDO del marcador central, los de pareja2 son el DERECHO.
+1. pareja1 = el equipo de la IZQUIERDA. pareja2 = el equipo de la DERECHA.
+2. Los IDs son los NÚMEROS DE 6 o 7 DÍGITOS que aparecen DEBAJO de cada nombre.
+3. Los PUNTOS DEL PARTIDO están en el CENTRO (ej. 111 : 98). El número de la IZQUIERDA (111) son los puntos de la pareja1. El número de la DERECHA (98) son los puntos de la pareja2.
+4. IGNORA por completo los banners de "VICTORIA" o "DERROTA" y los números de ranking como +2 o -2. Solo extrae los nombres, los IDs, y los puntos del centro.
 
 Devuelve ÚNICAMENTE este JSON sin texto adicional:
 {
   "partidas": [
     {
       "pareja1": {
-        "jugador1": "nombre del primer jugador del lado izquierdo",
+        "jugador1": "nombre del primer jugador de la IZQUIERDA",
         "id1": "ID numérico debajo del nombre",
-        "jugador2": "nombre del segundo jugador del lado izquierdo",
+        "jugador2": "nombre del segundo jugador de la IZQUIERDA",
         "id2": "ID numérico debajo del nombre",
-        "puntos": 87
+        "puntos": 111
       },
       "pareja2": {
-        "jugador1": "nombre del primer jugador del lado derecho",
+        "jugador1": "nombre del primer jugador de la DERECHA",
         "id1": "ID numérico debajo del nombre",
-        "jugador2": "nombre del segundo jugador del lado derecho",
+        "jugador2": "nombre del segundo jugador de la DERECHA",
         "id2": "ID numérico debajo del nombre",
-        "puntos": 114
+        "puntos": 98
       }
     }
   ]

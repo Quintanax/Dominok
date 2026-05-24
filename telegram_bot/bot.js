@@ -155,30 +155,30 @@ bot.on('photo', async (ctx) => {
     const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
 
 FORMATO DE LA IMAGEN:
-La imagen muestra una pantalla de resultado de partida con este diseño:
-- Lado IZQUIERDO (banner rojo "DERROTA"): 2 jugadores perdedores con nombres, IDs numéricos y -2
-- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de dos números separados por ":" (ejemplo: 87 : 114)
-- Lado DERECHO (banner verde "VICTORIA"): 2 jugadores ganadores con nombres, IDs numéricos y +2
+- Lado IZQUIERDO: 2 jugadores (Pareja 1) con nombres, y debajo de cada nombre un número de ID (ej: 3389307, 7890807). Ignora los números con + o - (ej: +2, -2).
+- Centro: Logo "VS" y debajo "Puntos Totales" seguido de la puntuación final separada por ":" (ejemplo: 111 : 98).
+- Lado DERECHO: 2 jugadores (Pareja 2) con nombres, y debajo de cada nombre un número de ID.
 
 REGLAS CRÍTICAS:
-1. Los IDs son los NÚMEROS que aparecen DEBAJO de cada nombre (ejemplo: 1151021, 5729268, 11201629, 1080144).
-2. Los PUNTOS REALES del partido son los que aparecen en el CENTRO junto a "Puntos Totales" (ejemplo: 87 y 114).
-3. Los -2 y +2 de los lados son cambios de ranking, NO son los puntos del partido. IGNÓRALOS.
+1. p1 (pareja 1) = equipo de la IZQUIERDA. p2 (pareja 2) = equipo de la DERECHA.
+2. Los IDs son los NÚMEROS DE 6 o 7 DÍGITOS que aparecen DEBAJO de cada nombre.
+3. Los PUNTOS están en el CENTRO. El número IZQUIERDO son los puntos de p1, el número DERECHO son los puntos de p2.
+4. IGNORA los textos "VICTORIA" o "DERROTA" y los números como +2 o -2. Solo importan los nombres, IDs y los puntos centrales.
 
 Devuelve SOLO un JSON con esta estructura exacta:
 {
   "partidas": [
     {
-      "p1_j1": "nombre del jugador 1 (izquierda)",
+      "p1_j1": "nombre del jugador 1 (IZQUIERDA)",
       "p1_j1_num": "número/ID debajo del nombre",
-      "p1_j2": "nombre del jugador 2 (izquierda)",
+      "p1_j2": "nombre del jugador 2 (IZQUIERDA)",
       "p1_j2_num": "número/ID debajo del nombre",
-      "p2_j1": "nombre del jugador 1 (derecha)",
+      "p2_j1": "nombre del jugador 1 (DERECHA)",
       "p2_j1_num": "número/ID debajo del nombre",
-      "p2_j2": "nombre del jugador 2 (derecha)",
+      "p2_j2": "nombre del jugador 2 (DERECHA)",
       "p2_j2_num": "número/ID debajo del nombre",
-      "p1_pts": 87,
-      "p2_pts": 114
+      "p1_pts": 111,
+      "p2_pts": 98
     }
   ]
 }
@@ -323,15 +323,16 @@ IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL, SOLO EL OBJETO JSON PURO.`;
     });
 
     // Guardar las nuevas partidas en la subcolección 'matches' usando batch
+    console.log('⏳ Guardando partidas en Firebase...');
     const batch = db.batch();
     for (const m of newMatches) {
       const mRef = groupRef.collection('matches').doc(m.id);
       batch.set(mRef, m);
     }
-    await batch.commit();
-
+    await withTimeout(batch.commit(), 15000, 'Guardar partidas (batch.commit)');
+    
     ctx.reply(`✅ ¡Éxito! Se registraron ${newMatches.length} partida(s) en el sistema.`);
-    console.log(`💾 ${newMatches.length} partida(s) guardadas en la subcolección de Firestore para grupo: ${DEFAULT_GROUP_ID}`);
+    console.log(`💾 ${newMatches.length} partida(s) guardadas exitosamente.`);
 
   } catch (error) {
     console.error('❌ Error procesando foto:', error);
