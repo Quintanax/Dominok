@@ -318,9 +318,10 @@ const DB = {
     return { playerId, played, wins, losses, pointsFor, pointsAgainst, pointDiff, shoesGiven, shoesReceived, eff: parseFloat(eff), currentStreak, currentStreakType, maxWinStreak, maxLossStreak };
   },
 
-  getAllPlayerStats(groupId) {
+  getAllPlayerStats(groupId, startDate = null, endDate = null) {
     // ── Caché: devolver resultado previo si no ha cambiado ──
-    const cached = this._statsCache[groupId];
+    const cacheKey = `stats_${groupId}_${startDate || 'all'}_${endDate || 'all'}`;
+    const cached = this._statsCache[cacheKey];
     if (cached) return cached;
 
     // ── Single-pass O(matches): computar stats de TODOS los jugadores en una sola iteración ──
@@ -338,7 +339,21 @@ const DB = {
     });
 
     // Una sola pasada por las partidas (ordenadas cronológicamente)
-    const matches = this.getMatches(groupId);
+    let matches = this.getMatches(groupId);
+    if (startDate || endDate) {
+      matches = matches.filter(m => {
+        if (!m.date) return true;
+        const d = new Date(m.date);
+        if (isNaN(d.getTime())) return true;
+        if (startDate && d < new Date(startDate)) return false;
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          if (d > end) return false;
+        }
+        return true;
+      });
+    }
     const chronological = [...matches].reverse(); // getMatches devuelve desc
     for (const m of chronological) {
       const processTeam = (myTeamKey, oppTeamKey) => {
@@ -404,7 +419,7 @@ const DB = {
     }).sort((a, b) => b.stats.eff - a.stats.eff || b.stats.wins - a.stats.wins);
 
     // Guardar en caché
-    this._statsCache[groupId] = result;
+    this._statsCache[cacheKey] = result;
     return result;
   },
 
@@ -441,12 +456,26 @@ const DB = {
     return { played, p1Wins, p2Wins };
   },
 
-  getBestPairs(groupId) {
+  getBestPairs(groupId, startDate = null, endDate = null) {
     // Usar caché de parejas si existe
-    const cacheKey = `pairs_${groupId}`;
+    const cacheKey = `pairs_${groupId}_${startDate || 'all'}_${endDate || 'all'}`;
     if (this._statsCache[cacheKey]) return this._statsCache[cacheKey];
 
-    const matches = this.getMatches(groupId);
+    let matches = this.getMatches(groupId);
+    if (startDate || endDate) {
+      matches = matches.filter(m => {
+        if (!m.date) return true;
+        const d = new Date(m.date);
+        if (isNaN(d.getTime())) return true;
+        if (startDate && d < new Date(startDate)) return false;
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          if (d > end) return false;
+        }
+        return true;
+      });
+    }
     const chronological = [...matches].reverse();
     const pairsMap = {};
 

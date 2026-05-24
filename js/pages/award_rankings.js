@@ -25,7 +25,7 @@ const AwardRankingsPage = {
     { id: 'pairloss',  icon: '💔', label: 'Peor Racha (Derrotas)',      key: p => p.stats.maxLossStreak || 0, fmt: v => `${v} seguidas` },
   ],
 
-  state: { tab: 'individual' },
+  state: { tab: 'individual', startDate: '', endDate: '' },
 
   render() {
     return `
@@ -37,12 +37,24 @@ const AwardRankingsPage = {
         </div>
       </div>
 
-      <!-- Tab switcher -->
-      <div style="display:flex;gap:8px;margin-bottom:20px;background:var(--bg-elevated);padding:5px;border-radius:var(--radius-lg);width:fit-content">
-        <button class="btn btn-sm ${this.state.tab==='individual'?'btn-primary':'btn-ghost'}"
-                style="border-radius:var(--radius-md)" onclick="AwardRankingsPage.setTab('individual')">👤 Individual</button>
-        <button class="btn btn-sm ${this.state.tab==='pairs'?'btn-primary':'btn-ghost'}"
-                style="border-radius:var(--radius-md)" onclick="AwardRankingsPage.setTab('pairs')">👥 Parejas</button>
+      <!-- Controls (Tabs + Filters) -->
+      <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; align-items:center;">
+        <!-- Tab switcher -->
+        <div style="display:flex;gap:8px;background:var(--bg-elevated);padding:5px;border-radius:var(--radius-lg);">
+          <button class="btn btn-sm ${this.state.tab==='individual'?'btn-primary':'btn-ghost'}"
+                  style="border-radius:var(--radius-md)" onclick="AwardRankingsPage.setTab('individual')">👤 Individual</button>
+          <button class="btn btn-sm ${this.state.tab==='pairs'?'btn-primary':'btn-ghost'}"
+                  style="border-radius:var(--radius-md)" onclick="AwardRankingsPage.setTab('pairs')">👥 Parejas</button>
+        </div>
+        
+        <!-- Date Filters -->
+        <div style="display:flex; gap:8px; align-items:center; background:var(--bg-elevated); padding:5px; border-radius:var(--radius-lg);">
+          <span style="color:var(--text-muted); font-size:0.85rem; font-weight:600; padding-left:4px;">Rango:</span>
+          <input type="date" id="rankings-start-date" class="form-input" style="padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.85rem;" value="${this.state.startDate || ''}" onchange="AwardRankingsPage.onDateChange()">
+          <span style="color:var(--text-muted); font-size:0.85rem;">-</span>
+          <input type="date" id="rankings-end-date" class="form-input" style="padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 0.85rem;" value="${this.state.endDate || ''}" onchange="AwardRankingsPage.onDateChange()">
+          <button class="btn btn-sm btn-ghost" style="padding:4px 8px; font-size:0.85rem;" onclick="AwardRankingsPage.clearDates()" title="Limpiar fechas">❌</button>
+        </div>
       </div>
 
       <div id="award-content"></div>
@@ -122,6 +134,18 @@ const AwardRankingsPage = {
     }
   },
 
+  clearDates() {
+    this.state.startDate = '';
+    this.state.endDate = '';
+    this.setTab(this.state.tab);
+  },
+
+  onDateChange() {
+    this.state.startDate = document.getElementById('rankings-start-date').value;
+    this.state.endDate = document.getElementById('rankings-end-date').value;
+    this.setTab(this.state.tab);
+  },
+
   _renderContent() {
     const el = document.getElementById('award-content');
     if (!el) return;
@@ -135,8 +159,8 @@ const AwardRankingsPage = {
   _buildGrid(cats, isPairs) {
     const groupId = Auth.getGroupId();
     const items = isPairs
-      ? DB.getBestPairs(groupId).filter(p => p.stats.played >= 1)
-      : DB.getAllPlayerStats(groupId);
+      ? DB.getBestPairs(groupId, this.state.startDate, this.state.endDate).filter(p => p.stats.played >= 1)
+      : DB.getAllPlayerStats(groupId, this.state.startDate, this.state.endDate);
 
     if (!items.length) {
       return `<div class="empty-state"><div class="empty-icon">${isPairs?'👥':'👤'}</div><div class="empty-text">No hay datos suficientes aún</div></div>`;
