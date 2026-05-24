@@ -483,13 +483,24 @@ const MatchesPage = {
     if (existingId) { DB.updateMatch(existingId, matchData); Toast.success('Partida actualizada localmente'); }
     else { const newMatch = DB.addMatch(matchData); savedMatchId = newMatch.id; Toast.success('Partida registrada localmente'); }
 
-    // Bloquear el listener para este ID durante 8 seg y sincronizar
-    // inmediatamente, evitando que Firestore sobreescriba el cambio local.
-    if (typeof CloudDB !== 'undefined') {
+    // Bloquear el listener para este ID durante 8 seg y hacer
+    // una actualización RÁPIDA solo de esta partida en Firebase.
+    if (typeof CloudDB !== 'undefined' && CloudDB._getDb) {
       if (savedMatchId && CloudDB._markLocalWrite) CloudDB._markLocalWrite(savedMatchId);
-      if (CloudDB.syncToCloud) {
-        await CloudDB.syncToCloud();
-        Toast.success('✅ Sincronizado a la nube');
+      
+      try {
+        const db = CloudDB._getDb();
+        if (db) {
+          const matchToUpload = DB._store.matches.find(m => m.id === savedMatchId);
+          if (matchToUpload) {
+            await db.collection('groups').doc(Auth.getGroupId()).collection('matches').doc(savedMatchId).set(matchToUpload, { merge: true });
+            Toast.success('✅ Guardado en la nube');
+          }
+        }
+      } catch (e) {
+        console.error('Error fast sync:', e);
+        // Fallback
+        if (CloudDB.syncToCloud) CloudDB.syncToCloud();
       }
     }
 
