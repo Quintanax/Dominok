@@ -485,7 +485,7 @@ const StatsPage = {
     // reverse to show newest first
     allMatches.reverse();
 
-    let wins = 0, losses = 0, pf = 0, pa = 0;
+    let wins = 0, losses = 0, pf = 0, pa = 0, shoesGiven = 0;
 
     const matchesHtml = allMatches.map(m => {
       const isT1 = (m.team1.player1 === mainId && m.team1.player2 === partnerId) || (m.team1.player1 === partnerId && m.team1.player2 === mainId);
@@ -496,6 +496,7 @@ const StatsPage = {
       if (won) wins++; else losses++;
       pf += myScore;
       pa += oppScore;
+      shoesGiven += isT1 ? (m.shoes?.team1Given || 0) : (m.shoes?.team2Given || 0);
 
       const nm = (id)=> Utils.escHtml(DB.getPlayerById(id)?.name?.split(' ')[0]||'?');
       const opp1 = isT1 ? m.team2.player1 : m.team1.player1;
@@ -523,7 +524,7 @@ const StatsPage = {
     const eff = played > 0 ? ((wins / played) * 100).toFixed(0) : 0;
     const diff = pf - pa;
 
-    App.showModal({
+    App.openModal({
       title: `👥 Detalles de la Pareja`,
       body: `
         <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg-elevated);border-radius:var(--radius-lg)">
@@ -538,16 +539,21 @@ const StatsPage = {
           </div>
         </div>
         
-        <div class="grid-2" style="margin-bottom:16px; gap:8px;">
+        <div class="grid-3" style="margin-bottom:16px; gap:8px;">
           <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
              <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Efectividad</div>
              <div style="font-size:1.8rem;font-weight:900;color:${eff>=50?'var(--accent-success)':'var(--accent-danger)'}">${eff}%</div>
              <div style="font-size:0.85rem;margin-top:4px"><span class="text-success">${wins}V</span> — <span class="text-danger">${losses}D</span></div>
           </div>
           <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
-             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Diferencia Pts</div>
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Dif. Pts</div>
              <div style="font-size:1.8rem;font-weight:900;color:${diff>=0?'var(--accent-success)':'var(--accent-danger)'}">${diff>0?'+':''}${diff}</div>
              <div style="font-size:0.85rem;margin-top:4px;color:var(--text-muted)">${pf} a favor, ${pa} en contra</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Zapatos Dados</div>
+             <div style="font-size:1.8rem;font-weight:900;color:var(--accent-warning)">👟 ${shoesGiven}</div>
+             <div style="font-size:0.85rem;margin-top:4px;color:var(--text-muted)">A sus rivales</div>
           </div>
         </div>
 
