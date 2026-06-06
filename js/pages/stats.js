@@ -485,11 +485,18 @@ const StatsPage = {
     // reverse to show newest first
     allMatches.reverse();
 
+    let wins = 0, losses = 0, pf = 0, pa = 0;
+
     const matchesHtml = allMatches.map(m => {
       const isT1 = (m.team1.player1 === mainId && m.team1.player2 === partnerId) || (m.team1.player1 === partnerId && m.team1.player2 === mainId);
       const won = (isT1 && m.winner === 'team1') || (!isT1 && m.winner === 'team2');
       const myScore = isT1 ? m.score.team1 : m.score.team2;
       const oppScore = isT1 ? m.score.team2 : m.score.team1;
+      
+      if (won) wins++; else losses++;
+      pf += myScore;
+      pa += oppScore;
+
       const nm = (id)=> Utils.escHtml(DB.getPlayerById(id)?.name?.split(' ')[0]||'?');
       const opp1 = isT1 ? m.team2.player1 : m.team1.player1;
       const opp2 = isT1 ? m.team2.player2 : m.team1.player2;
@@ -512,10 +519,14 @@ const StatsPage = {
         </div>`;
     }).join('');
 
+    const played = wins + losses;
+    const eff = played > 0 ? ((wins / played) * 100).toFixed(0) : 0;
+    const diff = pf - pa;
+
     App.showModal({
       title: `👥 Detalles de la Pareja`,
       body: `
-        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--bg-elevated);border-radius:var(--radius-lg)">
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg-elevated);border-radius:var(--radius-lg)">
           <div style="text-align:center">
              <div class="avatar avatar-lg" style="margin:0 auto 8px;background:${Utils.avatarColor(mainP.name)}">${Utils.initials(mainP.name)}</div>
              <div style="font-weight:700">${Utils.escHtml(mainP.name.split(' ')[0])}</div>
@@ -526,8 +537,22 @@ const StatsPage = {
              <div style="font-weight:700">${Utils.escHtml(partnerP.name.split(' ')[0])}</div>
           </div>
         </div>
-        <h4 style="margin-bottom:12px;color:var(--text-primary)">Partidas jugadas juntos (${allMatches.length})</h4>
-        <div style="max-height:400px;overflow-y:auto;padding-right:4px">
+        
+        <div class="grid-2" style="margin-bottom:16px; gap:8px;">
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Efectividad</div>
+             <div style="font-size:1.8rem;font-weight:900;color:${eff>=50?'var(--accent-success)':'var(--accent-danger)'}">${eff}%</div>
+             <div style="font-size:0.85rem;margin-top:4px"><span class="text-success">${wins}V</span> — <span class="text-danger">${losses}D</span></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Diferencia Pts</div>
+             <div style="font-size:1.8rem;font-weight:900;color:${diff>=0?'var(--accent-success)':'var(--accent-danger)'}">${diff>0?'+':''}${diff}</div>
+             <div style="font-size:0.85rem;margin-top:4px;color:var(--text-muted)">${pf} a favor, ${pa} en contra</div>
+          </div>
+        </div>
+
+        <h4 style="margin-bottom:12px;color:var(--text-primary)">Historial de Partidas (${played})</h4>
+        <div style="max-height:300px;overflow-y:auto;padding-right:4px">
           ${matchesHtml || '<div class="empty-state" style="padding:20px">No hay detalles disponibles</div>'}
         </div>
       `,
