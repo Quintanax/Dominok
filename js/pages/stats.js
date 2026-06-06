@@ -6,6 +6,7 @@ const StatsPage = {
 
   _tabs: [
     ['h2h','⚔️','VS Directo (H2H)','⭐⭐⭐'],
+    ['mantequillas','🧈','Papás y Mantequillas','⭐⭐⭐'],
     ['nemesis','🛡️','Némesis y Kryptonita','⭐⭐⭐'],
     ['teammates','👥','Análisis de Compañeros','⭐⭐⭐'],
     ['evolution','📈','Evolución de Forma','⭐⭐'],
@@ -146,7 +147,7 @@ const StatsPage = {
   renderTab() {
     const el = document.getElementById('stats-content');
     if (!el) return;
-    const map = { h2h: '_viewH2H', nemesis: '_viewNemesis', teammates: '_viewTeammates',
+    const map = { h2h: '_viewH2H', mantequillas: '_viewMantequillas', nemesis: '_viewNemesis', teammates: '_viewTeammates',
       evolution: '_viewEvolution', streaks: '_viewStreaks', scores: '_viewScores',
       heatmap: '_viewHeatmap', timeline: '_viewTimeline' };
     el.innerHTML = this[map[this.state.tab] || '_viewH2H']();
@@ -478,6 +479,95 @@ const StatsPage = {
       `,
       footer: `<button class="btn btn-outline" onclick="App.closeModal()" style="width:100%">Cerrar</button>`
     });
+  },
+
+  // ========== 2.5 MANTEQUILLAS ==========
+  _viewMantequillas() {
+    setTimeout(()=>this._mantRender(), 50);
+    return `
+      <div class="stat-card">
+        <h3 style="margin:0 0 4px">🧈 Papás y Mantequillas</h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 14px">Descubre a quién dominas (Mantequilla) y quién te domina a ti (Papá), filtrando por cantidad de partidas.</p>
+        <div class="grid-2">
+          <div class="form-group" style="max-width:320px">
+            <label class="form-label">Seleccionar jugador</label>
+            <select id="mant-p" class="form-select" onchange="StatsPage._mantRender()"><option value="">— Seleccionar —</option>${this._pOpts(this.state.p1)}</select>
+          </div>
+          <div class="form-group" style="max-width:150px">
+            <label class="form-label">Mín. Partidas</label>
+            <input type="number" id="mant-min" class="form-control" value="3" min="1" oninput="StatsPage._mantRender()">
+          </div>
+        </div>
+      </div>
+      <div id="mant-out">${this._empty('🧈','Selecciona un jugador')}</div>`;
+  },
+
+  _mantRender() {
+    const p = document.getElementById('mant-p')?.value;
+    const minStr = document.getElementById('mant-min')?.value;
+    const minG = parseInt(minStr, 10) || 1;
+
+    if (p) this.state.p1 = p;
+    const el = document.getElementById('mant-out');
+    if (!el || !p) { if(el) el.innerHTML = this._empty('🧈','Selecciona un jugador'); return; }
+
+    const gId = Auth.getGroupId();
+    const pl = DB.getPlayerById(p);
+    const others = DB.getPlayers(gId).filter(x=>x.id!==p);
+
+    const rivalData = others.map(opp => {
+      const vs = DB.getVsStats(p, opp.id, gId);
+      if (vs.played < minG) return null;
+      return { opp, vs, eff: vs.p1Wins/vs.played };
+    }).filter(Boolean).sort((a,b)=>a.eff - b.eff);
+
+    if (!rivalData.length) { el.innerHTML = this._empty('📊',`No hay suficientes enfrentamientos directos (mín. ${minG} PJ)`); return; }
+
+    const papa = rivalData[0]; // Worst efficiency (they beat me) -> Papá
+    const mantequilla = rivalData[rivalData.length-1]; // Best efficiency (I beat them) -> Mantequilla
+
+    const allVs = rivalData.map(r => `
+      <tr style="cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${r.opp.id}')">
+        <td><div class="player-cell">${Utils.avatarEl(r.opp.name)}<span>${Utils.escHtml(r.opp.name)}</span></div></td>
+        <td class="col-num">${r.vs.played}</td>
+        <td class="col-num text-success">${r.vs.p1Wins}</td>
+        <td class="col-num text-danger">${r.vs.p2Wins}</td>
+        <td>
+          <div class="eff-bar">
+            <div class="progress-bar" style="flex:1"><div class="progress-fill ${r.eff>=0.5?'green':'red'}" style="width:${r.eff*100}%"></div></div>
+            <span class="eff-pct">${(r.eff*100).toFixed(0)}%</span>
+          </div>
+        </td>
+      </tr>`).join('');
+
+    el.innerHTML = `
+      <div class="grid-2" style="margin-bottom:12px">
+        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-danger); cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${papa.opp.id}')">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-danger);font-weight:700;margin-bottom:12px">⚠️ Su Papá — Le gana seguido</div>
+          <div class="avatar avatar-xl" style="margin:0 auto 10px;background:${Utils.avatarColor(papa.opp.name)}">${Utils.initials(papa.opp.name)}</div>
+          <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">${Utils.escHtml(papa.opp.name)}</div>
+          <div style="font-size:1.8rem;font-weight:900;color:var(--accent-danger)">${(papa.eff*100).toFixed(1)}%</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">efectividad de ${Utils.escHtml(pl.name)}</div>
+          <div style="margin-top:8px;font-size:0.85rem"><span class="text-success">${papa.vs.p1Wins}V</span> — <span class="text-danger">${papa.vs.p2Wins}D</span> en ${papa.vs.played} PJ</div>
+        </div>
+        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-success); cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${mantequilla.opp.id}')">
+          <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-success);font-weight:700;margin-bottom:12px">🧈 Su Mantequilla — Lo domina</div>
+          <div class="avatar avatar-xl" style="margin:0 auto 10px;background:${Utils.avatarColor(mantequilla.opp.name)}">${Utils.initials(mantequilla.opp.name)}</div>
+          <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">${Utils.escHtml(mantequilla.opp.name)}</div>
+          <div style="font-size:1.8rem;font-weight:900;color:var(--accent-success)">${(mantequilla.eff*100).toFixed(1)}%</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">efectividad de ${Utils.escHtml(pl.name)}</div>
+          <div style="margin-top:8px;font-size:0.85rem"><span class="text-success">${mantequilla.vs.p1Wins}V</span> — <span class="text-danger">${mantequilla.vs.p2Wins}D</span> en ${mantequilla.vs.played} PJ</div>
+        </div>
+      </div>
+      <div class="stat-card" style="padding:0;overflow:hidden">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-color);font-weight:700">Todos los rivales directos de ${Utils.escHtml(pl.name)} (Mín. ${minG} PJ)</div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>Rival</th><th class="col-num">PJ</th><th class="col-num">V</th><th class="col-num">D</th><th>Efectividad</th></tr></thead>
+            <tbody>${allVs}</tbody>
+          </table>
+        </div>
+      </div>`;
   },
 
   // ========== 3. TEAMMATES ==========
