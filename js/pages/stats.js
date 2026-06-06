@@ -454,7 +454,7 @@ const StatsPage = {
             <tbody>
               ${list.map((x,i)=>{
                 const nm = DB.getPlayerById(x.id)?.name||'?';
-                return `<tr>
+                return `<tr style="cursor:pointer" onclick="StatsPage._showPartnerDetails('${p}', '${x.id}')">
                   <td><div class="rank-badge rank-${i<3?i+1:'other'}">${i+1}</div></td>
                   <td><div class="player-cell">${Utils.avatarEl(nm)}<span>${Utils.escHtml(nm)}</span></div></td>
                   <td class="col-num">${x.p}</td>
@@ -468,6 +468,71 @@ const StatsPage = {
           </table>
         </div>
       </div>`;
+  },
+
+  _showPartnerDetails(mainId, partnerId) {
+    const mainP = DB.getPlayerById(mainId);
+    const partnerP = DB.getPlayerById(partnerId);
+    if (!mainP || !partnerP) return;
+
+    const gId = Auth.getGroupId();
+    const allMatches = DB.getMatchesForPlayer(mainId, gId).filter(m => {
+      const t1 = (m.team1.player1 === mainId && m.team1.player2 === partnerId) || (m.team1.player1 === partnerId && m.team1.player2 === mainId);
+      const t2 = (m.team2.player1 === mainId && m.team2.player2 === partnerId) || (m.team2.player1 === partnerId && m.team2.player2 === mainId);
+      return t1 || t2;
+    });
+
+    // reverse to show newest first
+    allMatches.reverse();
+
+    const matchesHtml = allMatches.map(m => {
+      const isT1 = (m.team1.player1 === mainId && m.team1.player2 === partnerId) || (m.team1.player1 === partnerId && m.team1.player2 === mainId);
+      const won = (isT1 && m.winner === 'team1') || (!isT1 && m.winner === 'team2');
+      const myScore = isT1 ? m.score.team1 : m.score.team2;
+      const oppScore = isT1 ? m.score.team2 : m.score.team1;
+      const nm = (id)=> Utils.escHtml(DB.getPlayerById(id)?.name?.split(' ')[0]||'?');
+      const opp1 = isT1 ? m.team2.player1 : m.team1.player1;
+      const opp2 = isT1 ? m.team2.player2 : m.team1.player2;
+      
+      return `
+        <div class="timeline-row" style="border-color:${won?'var(--accent-success)':'var(--accent-danger)'};margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-size:0.75rem;color:var(--text-muted)">${Utils.fmtDate(m.date)} &bull; ${m.type==='tournament'?'🏆 Torneo':'🎮 Amistoso'}</span>
+              <div style="font-weight:600;margin-top:2px">
+                vs <span style="color:var(--text-muted)">${nm(opp1)} & ${nm(opp2)}</span>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:900;font-size:1.1rem;color:${won?'var(--accent-success)':'var(--accent-danger)'}">
+                ${won?'V':'D'} ${myScore} — ${oppScore}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    App.showModal({
+      title: `👥 Detalles de la Pareja`,
+      body: `
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--bg-elevated);border-radius:var(--radius-lg)">
+          <div style="text-align:center">
+             <div class="avatar avatar-lg" style="margin:0 auto 8px;background:${Utils.avatarColor(mainP.name)}">${Utils.initials(mainP.name)}</div>
+             <div style="font-weight:700">${Utils.escHtml(mainP.name.split(' ')[0])}</div>
+          </div>
+          <div style="font-size:1.5rem;color:var(--text-muted)">+</div>
+          <div style="text-align:center">
+             <div class="avatar avatar-lg" style="margin:0 auto 8px;background:${Utils.avatarColor(partnerP.name)}">${Utils.initials(partnerP.name)}</div>
+             <div style="font-weight:700">${Utils.escHtml(partnerP.name.split(' ')[0])}</div>
+          </div>
+        </div>
+        <h4 style="margin-bottom:12px;color:var(--text-primary)">Partidas jugadas juntos (${allMatches.length})</h4>
+        <div style="max-height:400px;overflow-y:auto;padding-right:4px">
+          ${matchesHtml || '<div class="empty-state" style="padding:20px">No hay detalles disponibles</div>'}
+        </div>
+      `,
+      footer: `<button class="btn btn-outline" onclick="App.closeModal()" style="width:100%">Cerrar</button>`
+    });
   },
 
   // ========== 4. EVOLUTION ==========
