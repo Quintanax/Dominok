@@ -333,7 +333,7 @@ const StatsPage = {
     const victim  = rivalData[rivalData.length-1];
 
     const allVs = rivalData.map(r => `
-      <tr>
+      <tr style="cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${r.opp.id}')">
         <td><div class="player-cell">${Utils.avatarEl(r.opp.name)}<span>${Utils.escHtml(r.opp.name)}</span></div></td>
         <td class="col-num">${r.vs.played}</td>
         <td class="col-num text-success">${r.vs.p1Wins}</td>
@@ -348,7 +348,7 @@ const StatsPage = {
 
     el.innerHTML = `
       <div class="grid-2" style="margin-bottom:12px">
-        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-danger)">
+        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-danger); cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${nemesis.opp.id}')">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-danger);font-weight:700;margin-bottom:12px">⚠️ Su Némesis — Le gana seguido</div>
           <div class="avatar avatar-xl" style="margin:0 auto 10px;background:${Utils.avatarColor(nemesis.opp.name)}">${Utils.initials(nemesis.opp.name)}</div>
           <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">${Utils.escHtml(nemesis.opp.name)}</div>
@@ -356,7 +356,7 @@ const StatsPage = {
           <div style="font-size:0.8rem;color:var(--text-muted)">efectividad de ${Utils.escHtml(pl.name)}</div>
           <div style="margin-top:8px;font-size:0.85rem"><span class="text-success">${nemesis.vs.p1Wins}V</span> — <span class="text-danger">${nemesis.vs.p2Wins}D</span> en ${nemesis.vs.played} PJ</div>
         </div>
-        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-success)">
+        <div class="stat-card nemesis-card" style="border-top:4px solid var(--accent-success); cursor:pointer" onclick="StatsPage._showRivalDetails('${p}', '${victim.opp.id}')">
           <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent-success);font-weight:700;margin-bottom:12px">🎯 Su Víctima — Lo domina</div>
           <div class="avatar avatar-xl" style="margin:0 auto 10px;background:${Utils.avatarColor(victim.opp.name)}">${Utils.initials(victim.opp.name)}</div>
           <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">${Utils.escHtml(victim.opp.name)}</div>
@@ -378,6 +378,106 @@ const StatsPage = {
           </table>
         </div>
       </div>`;
+  },
+
+  _showRivalDetails(mainId, rivalId) {
+    const mainP = DB.getPlayerById(mainId);
+    const rivalP = DB.getPlayerById(rivalId);
+    if (!mainP || !rivalP) return;
+
+    const gId = Auth.getGroupId();
+    const allMatches = DB.getMatchesForPlayer(mainId, gId).filter(m => {
+      // main is in one team, rival in the other
+      const mainInT1 = m.team1.player1 === mainId || m.team1.player2 === mainId;
+      const mainInT2 = m.team2.player1 === mainId || m.team2.player2 === mainId;
+      const rivalInT1 = m.team1.player1 === rivalId || m.team1.player2 === rivalId;
+      const rivalInT2 = m.team2.player1 === rivalId || m.team2.player2 === rivalId;
+      return (mainInT1 && rivalInT2) || (mainInT2 && rivalInT1);
+    });
+
+    allMatches.reverse();
+
+    let wins = 0, losses = 0, pf = 0, pa = 0, shoesGiven = 0, shoesReceived = 0;
+
+    const matchesHtml = allMatches.map(m => {
+      const isT1 = m.team1.player1 === mainId || m.team1.player2 === mainId;
+      const won = (isT1 && m.winner === 'team1') || (!isT1 && m.winner === 'team2');
+      const myScore = isT1 ? m.score.team1 : m.score.team2;
+      const oppScore = isT1 ? m.score.team2 : m.score.team1;
+      
+      if (won) wins++; else losses++;
+      pf += myScore;
+      pa += oppScore;
+      shoesGiven += isT1 ? (m.shoes?.team1Given || 0) : (m.shoes?.team2Given || 0);
+      shoesReceived += isT1 ? (m.shoes?.team2Given || 0) : (m.shoes?.team1Given || 0);
+
+      const nm = (id)=> Utils.escHtml(DB.getPlayerById(id)?.name?.split(' ')[0]||'?');
+      const partnerId = isT1 ? (m.team1.player1===mainId?m.team1.player2:m.team1.player1) : (m.team2.player1===mainId?m.team2.player2:m.team2.player1);
+      const opp1 = isT1 ? m.team2.player1 : m.team1.player1;
+      const opp2 = isT1 ? m.team2.player2 : m.team1.player2;
+      
+      return `
+        <div class="timeline-row" style="border-color:${won?'var(--accent-success)':'var(--accent-danger)'};margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-size:0.75rem;color:var(--text-muted)">${Utils.fmtDate(m.date)} &bull; ${m.type==='tournament'?'🏆 Torneo':'🎮 Amistoso'}</span>
+              <div style="font-weight:600;margin-top:2px">
+                con <span style="color:var(--text-muted)">${nm(partnerId)}</span> vs <span style="color:var(--text-muted)">${nm(opp1)} & ${nm(opp2)}</span>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-weight:900;font-size:1.1rem;color:${won?'var(--accent-success)':'var(--accent-danger)'}">
+                ${won?'V':'D'} ${myScore} — ${oppScore}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const played = wins + losses;
+    const eff = played > 0 ? ((wins / played) * 100).toFixed(0) : 0;
+    const diff = pf - pa;
+
+    App.openModal({
+      title: `⚔️ Historial vs Rival`,
+      body: `
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px;padding:16px;background:var(--bg-elevated);border-radius:var(--radius-lg)">
+          <div style="text-align:center">
+             <div class="avatar avatar-lg" style="margin:0 auto 8px;background:${Utils.avatarColor(mainP.name)}">${Utils.initials(mainP.name)}</div>
+             <div style="font-weight:700">${Utils.escHtml(mainP.name.split(' ')[0])}</div>
+          </div>
+          <div style="font-size:1.5rem;color:var(--text-muted)">VS</div>
+          <div style="text-align:center">
+             <div class="avatar avatar-lg" style="margin:0 auto 8px;background:${Utils.avatarColor(rivalP.name)}">${Utils.initials(rivalP.name)}</div>
+             <div style="font-weight:700">${Utils.escHtml(rivalP.name.split(' ')[0])}</div>
+          </div>
+        </div>
+        
+        <div class="grid-3" style="margin-bottom:16px; gap:8px;">
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Efectividad</div>
+             <div style="font-size:1.8rem;font-weight:900;color:${eff>=50?'var(--accent-success)':'var(--accent-danger)'}">${eff}%</div>
+             <div style="font-size:0.85rem;margin-top:4px"><span class="text-success">${wins}V</span> — <span class="text-danger">${losses}D</span></div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Dif. Pts</div>
+             <div style="font-size:1.8rem;font-weight:900;color:${diff>=0?'var(--accent-success)':'var(--accent-danger)'}">${diff>0?'+':''}${diff}</div>
+             <div style="font-size:0.85rem;margin-top:4px;color:var(--text-muted)">${pf} a favor, ${pa} en contra</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:var(--radius-md);padding:12px;text-align:center">
+             <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Zapatos</div>
+             <div style="font-size:1.8rem;font-weight:900;color:var(--accent-warning)">👟 ${shoesGiven}</div>
+             <div style="font-size:0.85rem;margin-top:4px;color:var(--text-muted)">Recibidos: ${shoesReceived}</div>
+          </div>
+        </div>
+
+        <h4 style="margin-bottom:12px;color:var(--text-primary)">Historial de Partidas (${played})</h4>
+        <div style="max-height:300px;overflow-y:auto;padding-right:4px">
+          ${matchesHtml || '<div class="empty-state" style="padding:20px">No hay detalles disponibles</div>'}
+        </div>
+      `,
+      footer: `<button class="btn btn-outline" onclick="App.closeModal()" style="width:100%">Cerrar</button>`
+    });
   },
 
   // ========== 3. TEAMMATES ==========
