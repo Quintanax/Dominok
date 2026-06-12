@@ -179,7 +179,7 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
           status.innerHTML = `
             <div class="ocr-alert ocr-alert-info">
               <div class="spinner-sm"></div>
-              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Gemini 2.0 Flash...<br><small>${Utils.escHtml(file.name)}</small></span>
+              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Gemini 2.5 Flash...<br><small>${Utils.escHtml(file.name)}</small></span>
             </div>`;
         }
 
@@ -196,7 +196,7 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
               'X-Title': 'DominoStats Pro'
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.0-flash-001',
+              model: 'google/gemini-2.5-flash',
               temperature: 0.1,
               max_tokens: 1024,
               messages: [

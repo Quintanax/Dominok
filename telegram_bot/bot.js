@@ -81,7 +81,7 @@ async function callOpenRouter(prompt, base64Image) {
   const apiPromise = axios.post(
     'https://openrouter.ai/api/v1/chat/completions',
     {
-      model: 'google/gemini-2.0-flash-001',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
@@ -135,7 +135,7 @@ bot.command('group', (ctx) => {
 
 bot.on('photo', async (ctx) => {
   try {
-    ctx.reply('⏳ Recibido. Analizando con Gemini 2.0 Flash (OpenRouter)...');
+    ctx.reply('⏳ Recibido. Analizando con Gemini 2.5 Flash (OpenRouter)...');
     console.log('📸 Foto recibida — procesando...');
 
     // Helper para no quedarse colgado en promesas infinitas
@@ -185,7 +185,7 @@ Devuelve SOLO un JSON con esta estructura exacta:
 
 IMPORTANTE: NO DEVUELVAS NINGÚN TEXTO ADICIONAL, SOLO EL OBJETO JSON PURO.`;
 
-    console.log('🤖 Enviando imagen a OpenRouter (Gemini 2.0 Flash)...');
+    console.log('🤖 Enviando imagen a OpenRouter (Gemini 2.5 Flash)...');
     const text = await callOpenRouter(prompt, base64Image);
     console.log('✅ OpenRouter respondió exitosamente.');
 
