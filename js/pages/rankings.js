@@ -68,15 +68,16 @@ const RankingsPage = {
 
       el.innerHTML = `
         <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; align-items:center;">
-          <div style="display:flex;gap:8px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content">
+          <div style="display:flex;gap:8px;background:var(--bg-elevated);padding:6px;border-radius:var(--radius-lg);width:fit-content;overflow-x:auto;white-space:nowrap">
             <button class="btn btn-sm ${mt==='individual'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('individual')">👤 Individual</button>
             <button class="btn btn-sm ${mt==='pairs'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('pairs')">👥 Parejas</button>
             <button class="btn btn-sm ${mt==='points'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('points')">⭐ Por Puntos</button>
+            <button class="btn btn-sm ${mt==='medals'?'btn-primary':'btn-ghost'}" style="border-radius:var(--radius-md)" onclick="RankingsPage.setMobileTab('medals')">🎖️ Medallas</button>
           </div>
           ${filterBarHtml}
         </div>
         <div>
-          ${mt==='individual' ? this._renderPlayers() : mt==='pairs' ? this._renderPairs() : this._renderPointsRanking()}
+          ${mt==='individual' ? this._renderPlayers() : mt==='pairs' ? this._renderPairs() : mt==='points' ? this._renderPointsRanking() : this._renderMedals()}
         </div>
       `;
     } else {
@@ -156,7 +157,8 @@ const RankingsPage = {
       <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">${ps.stats.wins}V · ${ps.stats.losses}D</div>
     `);
 
-    const listHtml = allStats.map((ps, i) => this._playerRow(ps, i)).join('');
+    const medalsMap = this._calculateMedals(allStats);
+    const listHtml = allStats.map((ps, i) => this._playerRow(ps, i, medalsMap[ps.id] || [])).join('');
 
     return `
       ${podiumHtml}
@@ -168,13 +170,14 @@ const RankingsPage = {
       <div class="rk-list">${listHtml}</div>`;
   },
 
-  _playerRow(ps, i) {
+  _playerRow(ps, i, medals = []) {
     const st = ps.stats;
     const isOpen = this.state.expanded === ps.id;
     const streakHtml = st.currentStreak > 1
       ? `<span class="streak-badge ${st.currentStreakType==='win'?'streak-win':'streak-loss'}">${st.currentStreakType==='win'?'🔥':'❄️'}${st.currentStreak}</span>`
       : '';
     const diffColor = st.pointDiff >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+    const medalsHtml = medals.length ? `<div style="display:inline-flex;gap:2px;margin-left:6px">${medals.map(m=>m.html).join('')}</div>` : '';
 
     return `
     <div class="rk-row ${isOpen?'rk-row-open':''}">
@@ -184,7 +187,10 @@ const RankingsPage = {
         </div>
         <div class="avatar avatar-sm" style="background:${Utils.avatarColor(ps.name)};flex-shrink:0">${Utils.initials(ps.name)}</div>
         <div class="rk-name-col">
-          <span class="rk-name">${Utils.escHtml(ps.name)}</span>
+          <div style="display:flex;align-items:center">
+            <span class="rk-name">${Utils.escHtml(ps.name)}</span>
+            ${medalsHtml}
+          </div>
           ${st.currentStreak > 1 ? `<span class="rk-streak">${streakHtml}</span>` : ''}
         </div>
         <div class="rk-stats-inline">
@@ -217,6 +223,125 @@ const RankingsPage = {
         </div>
       </div>` : ''}
     </div>`;
+  },
+
+  _calculateMedals(allStats) {
+    if (!allStats || allStats.length === 0) return {};
+    const medalsMap = {};
+    const addMedal = (id, icon, title, desc, cssClass) => {
+      if (!medalsMap[id]) medalsMap[id] = [];
+      medalsMap[id].push({
+        icon, title, desc, cssClass,
+        html: `<span title="${title}" style="cursor:help" class="${cssClass}">${icon}</span>`
+      });
+    };
+
+    const findBest = (arr, keyFn, isMax = true) => {
+      let bestVal = isMax ? -Infinity : Infinity;
+      let winners = [];
+      for (const p of arr) {
+        const val = keyFn(p);
+        if (val === undefined || isNaN(val)) continue;
+        if (isMax ? val > bestVal : val < bestVal) { bestVal = val; winners = [p]; }
+        else if (val === bestVal) { winners.push(p); }
+      }
+      return { winners, val: bestVal };
+    };
+
+    const active = allStats.filter(p => p.stats.played > 0);
+    if (active.length === 0) return {};
+
+    // 🏆 Más Victorias
+    const bestWins = findBest(active, p => p.stats.wins, true);
+    if (bestWins.val > 0) bestWins.winners.forEach(p => addMedal(p.id, '🏆', `Más Victorias`, `${bestWins.val} Victorias`, 'text-warning'));
+
+    // ⭐ Mejor Efectividad
+    const bestEff = findBest(active, p => p.stats.eff, true);
+    bestEff.winners.forEach(p => addMedal(p.id, '⭐', `Mejor Efectividad`, `${bestEff.val}% Victorias`, 'text-warning'));
+
+    // 📈 Mejor Diferencia de Puntos
+    const bestDiff = findBest(active, p => p.stats.pointDiff, true);
+    bestDiff.winners.forEach(p => addMedal(p.id, '📈', `Mejor DP`, `+${bestDiff.val} Puntos`, 'text-success'));
+
+    // 👟 Más Zapatos Propinados
+    const bestShoes = findBest(active, p => p.stats.shoesGiven || 0, true);
+    if (bestShoes.val > 0) bestShoes.winners.forEach(p => addMedal(p.id, '👟', `Más Zapatos Propinados`, `${bestShoes.val} Zapatos`, 'text-warning'));
+
+    // 🔥 Mejor Racha
+    const bestWinStreak = findBest(active, p => p.stats.currentStreakType === 'win' ? p.stats.currentStreak : 0, true);
+    if (bestWinStreak.val > 1) bestWinStreak.winners.forEach(p => addMedal(p.id, '🔥', `Mejor Racha Actual`, `${bestWinStreak.val} Victorias seguidas`, 'text-danger'));
+
+    // 📉 Más Derrotas (Antimedalla)
+    const worstLosses = findBest(active, p => p.stats.losses, true);
+    if (worstLosses.val > 0) worstLosses.winners.forEach(p => addMedal(p.id, '📉', `Más Derrotas`, `${worstLosses.val} Derrotas`, 'text-danger'));
+
+    // 💔 Peor Efectividad (Antimedalla)
+    const worstEff = findBest(active, p => p.stats.eff, false);
+    worstEff.winners.forEach(p => addMedal(p.id, '💔', `Peor Efectividad`, `${worstEff.val}% Victorias`, 'text-danger'));
+
+    // ❄️ Peor Racha (Antimedalla)
+    const worstLossStreak = findBest(active, p => p.stats.currentStreakType === 'loss' ? p.stats.currentStreak : 0, true);
+    if (worstLossStreak.val > 1) worstLossStreak.winners.forEach(p => addMedal(p.id, '❄️', `Peor Racha Actual`, `${worstLossStreak.val} Derrotas seguidas`, 'text-primary'));
+
+    return medalsMap;
+  },
+
+  _renderMedals() {
+    const groupId = Auth.getGroupId();
+    let allStats = DB.getAllPlayerStats(groupId, this.state.dateFrom || null, this.state.dateTo || null);
+    if (this.state.minPlayed > 0) {
+      allStats = allStats.filter(p => p.stats.played >= this.state.minPlayed);
+    }
+    const medalsMap = this._calculateMedals(allStats);
+
+    const categories = [
+      { id: '🏆', title: 'Más Victorias', filter: m => m.title === 'Más Victorias', color: 'var(--accent-warning)', border: 'var(--accent-warning)' },
+      { id: '⭐', title: 'Mejor Efectividad', filter: m => m.title === 'Mejor Efectividad', color: 'var(--accent-warning)', border: 'var(--accent-warning)' },
+      { id: '📈', title: 'Mejor Dif. Puntos', filter: m => m.title === 'Mejor DP', color: 'var(--accent-success)', border: 'var(--accent-success)' },
+      { id: '👟', title: 'Más Zapatos Dados', filter: m => m.title === 'Más Zapatos Propinados', color: 'var(--accent-warning)', border: 'var(--accent-warning)' },
+      { id: '🔥', title: 'Mejor Racha', filter: m => m.title === 'Mejor Racha Actual', color: 'var(--accent-danger)', border: 'var(--accent-danger)' },
+      { id: '📉', title: 'Más Derrotas', filter: m => m.title === 'Más Derrotas', color: 'var(--accent-danger)', border: 'var(--accent-danger)' },
+      { id: '💔', title: 'Peor Efectividad', filter: m => m.title === 'Peor Efectividad', color: 'var(--accent-danger)', border: 'var(--accent-danger)' },
+      { id: '❄️', title: 'Peor Racha', filter: m => m.title === 'Peor Racha Actual', color: 'var(--accent-primary)', border: 'var(--accent-primary)' }
+    ];
+
+    let html = `<div class="grid-2" style="gap:12px">`;
+    
+    categories.forEach(cat => {
+      // Find all players who have this medal
+      const winners = allStats.filter(p => (medalsMap[p.id] || []).some(cat.filter));
+      
+      let winnersHtml = '';
+      if (winners.length === 0) {
+        winnersHtml = `<div style="color:var(--text-muted);font-size:0.8rem;text-align:center;padding:12px">Sin ganadores</div>`;
+      } else {
+        const firstMedal = medalsMap[winners[0].id].find(cat.filter);
+        const valueDesc = firstMedal.desc;
+
+        winnersHtml = `
+          <div style="font-size:0.8rem;font-weight:700;color:${cat.color};text-align:center;margin-bottom:8px">${valueDesc}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            ${winners.map(w => `
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer" onclick="RankingsPage.setMobileTab('individual'); RankingsPage.toggleExpand('${w.id}')">
+                <div class="avatar avatar-md" style="background:${Utils.avatarColor(w.name)};box-shadow:0 0 0 2px ${cat.border}40">${Utils.initials(w.name)}</div>
+                <div style="font-size:0.75rem;font-weight:600">${Utils.escHtml(w.name.split(' ')[0])}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="stat-card" style="padding:12px;border-top:3px solid ${cat.border}">
+          <div style="font-size:1.5rem;text-align:center;margin-bottom:4px">${cat.id}</div>
+          <div style="text-align:center;font-size:0.85rem;font-weight:800;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">${cat.title}</div>
+          ${winnersHtml}
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+    return html;
   },
 
   /* ── PAIRS ──────────────────────────────────── */
