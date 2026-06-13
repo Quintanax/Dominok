@@ -236,10 +236,42 @@ const StatsPage = {
     if (!a || !b || a===b) { el.innerHTML = this._empty('⚔️','Selecciona dos jugadores distintos'); return; }
 
     const gId = Auth.getGroupId();
-    const vs  = DB.getVsStats(a, b, gId);
     const pa  = DB.getPlayerById(a), pb = DB.getPlayerById(b);
-    const sa  = DB.getPlayerStats(a, gId), sb = DB.getPlayerStats(b, gId);
-    const pct = vs.played > 0 ? (vs.p1Wins/vs.played*100).toFixed(0) : 50;
+    const colA = Utils.avatarColor(pa.name);
+    const colB = Utils.avatarColor(pb.name);
+
+    // Compute direct H2H detailed stats
+    let h2hPlayed = 0, p1Wins = 0, p2Wins = 0, p1Points = 0, p2Points = 0, p1Shoes = 0, p2Shoes = 0;
+    const matches = DB.getMatches(gId);
+    for (const m of matches) {
+      const p1InT1 = m.team1.player1 === a || m.team1.player2 === a;
+      const p2InT2 = m.team2.player1 === b || m.team2.player2 === b;
+      const p2InT1 = m.team1.player1 === b || m.team1.player2 === b;
+      const p1InT2 = m.team2.player1 === a || m.team2.player2 === a;
+      if (!((p1InT1 && p2InT2) || (p2InT1 && p1InT2))) continue;
+      
+      h2hPlayed++;
+      if ((p1InT1 && m.winner === 'team1') || (p1InT2 && m.winner === 'team2')) {
+        p1Wins++;
+      } else {
+        p2Wins++;
+      }
+
+      if (p1InT1) {
+        p1Points += m.score.team1; p2Points += m.score.team2;
+        p1Shoes += (m.shoes?.team1Given ? 1 : 0); p2Shoes += (m.shoes?.team2Given ? 1 : 0);
+      } else {
+        p1Points += m.score.team2; p2Points += m.score.team1;
+        p1Shoes += (m.shoes?.team2Given ? 1 : 0); p2Shoes += (m.shoes?.team1Given ? 1 : 0);
+      }
+    }
+
+    const pct = h2hPlayed > 0 ? (p1Wins/h2hPlayed*100).toFixed(0) : 50;
+    
+    // Overall Stats and Rank
+    const allStats = DB.getAllPlayerStats(gId);
+    const rankA = allStats.findIndex(p => p.id === a) + 1;
+    const rankB = allStats.findIndex(p => p.id === b) + 1;
 
     // Recent form (last 10 matches each)
     const formA = DB.getMatchesForPlayer(a, gId).slice(0,10).map(m => {
@@ -255,34 +287,66 @@ const StatsPage = {
       <div class="stat-card">
         <div class="vs-hero">
           <div class="vs-side">
-            <div class="avatar avatar-xl" style="margin:0 auto 8px;background:${Utils.avatarColor(pa.name)}">${Utils.initials(pa.name)}</div>
+            <div class="avatar avatar-xl" style="margin:0 auto 8px;background:${colA}">${Utils.initials(pa.name)}</div>
             <div style="font-weight:800;font-size:1.1rem">${Utils.escHtml(pa.name)}</div>
-            <div class="big-score text-success">${vs.p1Wins}</div>
+            <div class="big-score" style="color:${colA}">${p1Wins}</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">victorias directas</div>
             <div style="margin-top:8px;display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
               ${formA.map(r=>`<span class="form-dot ${r}">${r==='w'?'V':'D'}</span>`).join('')}
             </div>
           </div>
           <div class="vs-mid">
-            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">${vs.played} PJ</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">${h2hPlayed} PJ</div>
             <div style="font-size:1.5rem">⚔️</div>
             <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px">VS</div>
           </div>
           <div class="vs-side">
-            <div class="avatar avatar-xl" style="margin:0 auto 8px;background:${Utils.avatarColor(pb.name)}">${Utils.initials(pb.name)}</div>
+            <div class="avatar avatar-xl" style="margin:0 auto 8px;background:${colB}">${Utils.initials(pb.name)}</div>
             <div style="font-weight:800;font-size:1.1rem">${Utils.escHtml(pb.name)}</div>
-            <div class="big-score text-danger">${vs.p2Wins}</div>
+            <div class="big-score" style="color:${colB}">${p2Wins}</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">victorias directas</div>
             <div style="margin-top:8px;display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
               ${formB.map(r=>`<span class="form-dot ${r}">${r==='w'?'V':'D'}</span>`).join('')}
             </div>
           </div>
         </div>
-        <div class="bar-dual"><div class="bar-dual-fill-a" style="width:${pct}%"></div><div class="bar-dual-fill-b"></div></div>
+        
+        <div class="bar-dual" style="background:${colB}; overflow:hidden; border-radius:10px; height:8px; display:flex;">
+          <div style="width:${pct}%; background:${colA}; height:100%"></div>
+        </div>
         <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-muted)">
           <span>${pct}% dominio</span><span>${(100-pct).toFixed(0)}% dominio</span>
         </div>
+
+        <div style="margin:20px 0; background:var(--bg-elevated); border-radius:var(--radius-lg); padding:16px;">
+          <h4 style="text-align:center; margin:0 0 16px 0; font-size:0.85rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:1px">📊 Comparación Directa (H2H)</h4>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:8px;">
+            <div style="width:33%; text-align:center; font-weight:800; color:${colA}">#${rankA}</div>
+            <div style="width:33%; text-align:center; font-size:0.75rem; color:var(--text-muted)">Rango en Liga</div>
+            <div style="width:33%; text-align:center; font-weight:800; color:${colB}">#${rankB}</div>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:8px;">
+            <div style="width:33%; text-align:center; font-weight:800; color:${colA}">${p1Points} pts</div>
+            <div style="width:33%; text-align:center; font-size:0.75rem; color:var(--text-muted)">Puntos Anotados</div>
+            <div style="width:33%; text-align:center; font-weight:800; color:${colB}">${p2Points} pts</div>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:8px;">
+            <div style="width:33%; text-align:center; font-weight:800; color:${colA}">${p1Shoes} 👟</div>
+            <div style="width:33%; text-align:center; font-size:0.75rem; color:var(--text-muted)">Zapatos Propinados</div>
+            <div style="width:33%; text-align:center; font-weight:800; color:${colB}">${p2Shoes} 👟</div>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="width:33%; text-align:center; font-weight:800; color:${colA}">${pct}%</div>
+            <div style="width:33%; text-align:center; font-size:0.75rem; color:var(--text-muted)">Efectividad H2H</div>
+            <div style="width:33%; text-align:center; font-weight:800; color:${colB}">${(100 - pct).toFixed(0)}%</div>
+          </div>
+        </div>
       </div>
+      
       <div class="grid-2">
         ${[{p:pa,label:'A'},{p:pb,label:'B'}].map(({p})=>{
           const gId2 = Auth.getGroupId();
@@ -290,7 +354,7 @@ const StatsPage = {
           return `
           <div class="stat-card">
             <div style="font-weight:700;margin-bottom:6px;color:var(--text-primary)">${Utils.escHtml(p.name)}</div>
-            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">TOTAL — ${sAll.played} PJ &bull; ${sAll.eff}% efectividad global</div>
+            <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">TOTAL GLOBAL — ${sAll.played} PJ &bull; ${sAll.eff}% efectividad global</div>
             ${this._splitStatsCard(p.id, gId2, p.name)}
           </div>`;
         }).join('')}
