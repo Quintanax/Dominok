@@ -188,7 +188,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
           const base64Data = await this._toBase64(file);
           const mimeType = file.type || 'image/jpeg';
 
-          const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          const res = await fetch('/api/groq', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
