@@ -122,7 +122,7 @@ const GeminiOCR = {
     document.getElementById('ocr-analyze-btn').disabled = true;
   },
 
-  // ─── ANÁLISIS POR LOTES (vía OpenRouter — Gemini 2.0 Flash) ─────────────
+  // ─── ANÁLISIS POR LOTES (vía OpenRouter — Gemini 2.5 Flash) ─────────────
   async analyzeBatch() {
     if (this._isAnalyzing) return;
     const apiKey = this.getApiKey();
@@ -135,36 +135,37 @@ const GeminiOCR = {
     
     let allDetectedPartidas = [];
     let errors = [];
+    let imageResults = [];
 
-    const prompt = `Eres un experto en analizar capturas de pantalla de resultados de dominó.
+    const prompt = `Eres un experto analizando capturas de pantalla de resultados de partidas de dominó en línea.
 
-FORMATO DE LA IMAGEN:
-- Lado IZQUIERDO: 2 jugadores (Pareja 1) con nombres, y debajo de cada nombre un número de ID (ej: 3389307, 7890807).
-- Centro: Logo "VS" y debajo dice "Puntos Totales" seguido de la puntuación final separada por ":" (ejemplo: 111 : 98).
-- Lado DERECHO: 2 jugadores (Pareja 2) con nombres, y debajo de cada nombre un número de ID.
+Tu tarea es extraer la información de la partida que aparece en la imagen.
 
-REGLAS CRÍTICAS:
-1. pareja1 = el equipo de la IZQUIERDA. pareja2 = el equipo de la DERECHA.
-2. Los IDs son los NÚMEROS DE 6 o 7 DÍGITOS que aparecen DEBAJO de cada nombre.
-3. Los PUNTOS DEL PARTIDO están en el CENTRO (ej. 111 : 98). El número de la IZQUIERDA (111) son los puntos de la pareja1. El número de la DERECHA (98) son los puntos de la pareja2.
-4. IGNORA por completo los banners de "VICTORIA" o "DERROTA" y los números de ranking como +2 o -2. Solo extrae los nombres, los IDs, y los puntos del centro.
+INSTRUCCIONES:
+- Identifica los 4 jugadores (2 por equipo).
+- El equipo IZQUIERDO es pareja1, el equipo DERECHO es pareja2.
+- Los IDs son números (6-7 dígitos) que aparecen debajo de los nombres de jugadores.
+- El marcador/puntuación final está en el centro de la imagen, usualmente en formato "X : Y" o similar.
+- El número de la izquierda corresponde a pareja1, el de la derecha a pareja2.
+- Ignora banners de "VICTORIA", "DERROTA", cambios de ranking (+2, -2) y cualquier otro texto decorativo.
+- Si la imagen NO es de una partida de dominó o no puedes extraer la información, devuelve: {"partidas": []}
 
-Devuelve ÚNICAMENTE este JSON sin texto adicional:
+IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicaciones ni texto adicional:
 {
   "partidas": [
     {
       "pareja1": {
-        "jugador1": "nombre del primer jugador de la IZQUIERDA",
-        "id1": "ID numérico debajo del nombre",
-        "jugador2": "nombre del segundo jugador de la IZQUIERDA",
-        "id2": "ID numérico debajo del nombre",
+        "jugador1": "nombre exacto del jugador 1 del equipo izquierdo",
+        "id1": "número ID debajo del jugador 1 (o null si no se ve)",
+        "jugador2": "nombre exacto del jugador 2 del equipo izquierdo",
+        "id2": "número ID debajo del jugador 2 (o null si no se ve)",
         "puntos": 111
       },
       "pareja2": {
-        "jugador1": "nombre del primer jugador de la DERECHA",
-        "id1": "ID numérico debajo del nombre",
-        "jugador2": "nombre del segundo jugador de la DERECHA",
-        "id2": "ID numérico debajo del nombre",
+        "jugador1": "nombre exacto del jugador 1 del equipo derecho",
+        "id1": "número ID debajo del jugador 1 (o null si no se ve)",
+        "jugador2": "nombre exacto del jugador 2 del equipo derecho",
+        "id2": "número ID debajo del jugador 2 (o null si no se ve)",
         "puntos": 98
       }
     }
@@ -198,7 +199,7 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
             body: JSON.stringify({
               model: 'google/gemini-2.5-flash',
               temperature: 0.1,
-              max_tokens: 1024,
+              max_tokens: 2048,
               messages: [
                 {
                   role: 'user',
@@ -217,7 +218,8 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
           }
 
           const data = await res.json();
-          const rawText = data.choices[0].message.content;
+          const rawText = data.choices?.[0]?.message?.content || '';
+          console.log(`[OCR] Respuesta cruda para "${file.name}":`, rawText);
 
           // Extraer JSON — soporta markdown code fences y texto libre
           let jsonString = '';
@@ -237,20 +239,52 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
               const parsed = JSON.parse(jsonString);
               if (parsed.partidas && parsed.partidas.length > 0) {
                 allDetectedPartidas = allDetectedPartidas.concat(parsed.partidas);
+                imageResults.push({ file: file.name, ok: true, count: parsed.partidas.length });
+              } else {
+                console.warn(`[OCR] La IA no detectó partidas en: ${file.name}. JSON recibido:`, parsed);
+                imageResults.push({ file: file.name, ok: false, reason: 'La IA no encontró una partida en esta imagen' });
+                errors.push(`${file.name}: La IA no encontró una partida`);
               }
             } catch (jsonErr) {
-              console.warn('JSON parse error en archivo:', file.name, jsonErr.message);
+              console.warn('[OCR] JSON parse error en archivo:', file.name, jsonErr.message, '\nTexto crudo:', rawText);
+              imageResults.push({ file: file.name, ok: false, reason: 'Respuesta de IA no válida (JSON malformado)' });
               errors.push(`${file.name}: JSON inválido de la IA`);
             }
+          } else {
+            console.warn(`[OCR] No se encontró JSON en la respuesta para "${file.name}". Texto crudo:`, rawText);
+            imageResults.push({ file: file.name, ok: false, reason: 'La IA no devolvió un resultado estructurado' });
+            errors.push(`${file.name}: Sin respuesta JSON`);
           }
         } catch (fileErr) {
-          console.error(`Error en archivo ${file.name}:`, fileErr);
+          console.error(`[OCR] Error en archivo ${file.name}:`, fileErr);
+          imageResults.push({ file: file.name, ok: false, reason: fileErr.message });
           errors.push(`${file.name}: ${fileErr.message}`);
         }
       }
 
       if (allDetectedPartidas.length === 0) {
-        throw new Error('No se detectaron partidas en ninguna de las imágenes.');
+        // Construir mensaje detallado por imagen
+        const detailLines = imageResults.map(r =>
+          r.ok
+            ? `✅ ${r.file}: ${r.count} partida(s) detectada(s)`
+            : `❌ ${r.file}: ${r.reason}`
+        ).join('<br>');
+
+        if (status) {
+          status.style.display = 'block';
+          status.innerHTML = `
+            <div class="ocr-alert ocr-alert-error">
+              <span>❌</span>
+              <div>
+                <strong>No se detectaron partidas en ninguna imagen.</strong><br>
+                <small style="line-height:1.8">${detailLines}</small>
+                <br><small style="opacity:0.7;margin-top:4px;display:block">💡 Revisa la consola del navegador (F12) para ver la respuesta completa de la IA.</small>
+              </div>
+            </div>`;
+        }
+        this._isAnalyzing = false;
+        if (btn) { btn.disabled = false; btn.textContent = '🔍 Reintentar lote'; }
+        return;
       }
 
       App.closeModal();
@@ -269,6 +303,7 @@ Devuelve ÚNICAMENTE este JSON sin texto adicional:
       if (btn) { btn.disabled = false; btn.textContent = '🔍 Reintentar lote'; }
     }
   },
+
 
   _showReviewModal(partidas) {
     const players = DB.getPlayers(Auth.getGroupId());
