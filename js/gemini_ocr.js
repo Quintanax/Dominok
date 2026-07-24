@@ -180,7 +180,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
           status.innerHTML = `
             <div class="ocr-alert ocr-alert-info">
               <div class="spinner-sm"></div>
-              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Llama 4 Scout Vision...<br><small>${Utils.escHtml(file.name)}</small></span>
+              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Llama 3.2 11B Vision...<br><small>${Utils.escHtml(file.name)}</small></span>
             </div>`;
         }
 
@@ -195,7 +195,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+              model: 'llama-3.2-11b-vision-preview',
               temperature: 0.1,
               max_tokens: 500,
               messages: [
