@@ -195,7 +195,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.0-flash-exp:free',
+              model: 'google/gemini-2.5-flash',
               temperature: 0.1,
               max_tokens: 800,
               messages: [
