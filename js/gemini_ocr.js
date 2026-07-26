@@ -34,7 +34,7 @@ const GeminiOCR = {
           <div class="form-group" style="margin-bottom:16px">
             <label class="form-label">OpenRouter API Key</label>
             <div style="display:flex;gap:8px">
-              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="sk-or-v1-..." style="flex:1" />
+              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="sk-..." style="flex:1" />
               <button class="btn btn-secondary btn-sm" onclick="GeminiOCR._saveApiKey()">Guardar</button>
             </div>
           </div>` : ''}
@@ -70,7 +70,7 @@ const GeminiOCR = {
 
   _saveApiKey() {
     const val = document.getElementById('ocr-api-key-input')?.value?.trim();
-    if (!val || !val.startsWith('sk-or-')) { Toast.error('Clave no válida. Debe empezar con sk-or-'); return; }
+    if (!val || !val.startsWith('sk-')) { Toast.error('Clave no válida. Debe empezar con sk-'); return; }
     this.setApiKey(val);
     Toast.success('API Key de OpenRouter guardada');
     this.openUploadModal();
