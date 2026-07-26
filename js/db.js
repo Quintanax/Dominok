@@ -241,6 +241,18 @@ const DB = {
   getMatches(groupId = null) {
     let m = this._store.matches;
     if (groupId) m = m.filter(x => x.groupId === groupId);
+    
+    // FIX: Normalize and correct any corrupted numeric timestamps (e.g., year 46180 bug)
+    m.forEach(match => {
+      if (typeof match.date === 'number') {
+        let ts = match.date;
+        if (ts > 4102444800000) { // If year > 2100, it was likely multiplied by 1000 by mistake
+          ts = Math.floor(ts / 1000);
+        }
+        match.date = Utils.getLocalISODate(new Date(ts));
+      }
+    });
+
     return m.sort((a, b) => new Date(b.date) - new Date(a.date));
   },
   getMatchById(id) { return this._store.matches.find(m => m.id === id); },
