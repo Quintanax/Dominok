@@ -7,11 +7,11 @@ const GeminiOCR = {
 
   // ─── CONFIGURACIÓN ───────────────────────────────────────────
   getApiKey() {
-    return localStorage.getItem('groq_ocr_api_key') || '';
+    return localStorage.getItem('openrouter_ocr_api_key') || '';
   },
 
   setApiKey(key) {
-    localStorage.setItem('groq_ocr_api_key', key.trim());
+    localStorage.setItem('openrouter_ocr_api_key', key.trim());
   },
 
   // ─── MODAL PRINCIPAL DE CARGA ─────────────────────────────────
@@ -28,13 +28,13 @@ const GeminiOCR = {
             <span>⚠️</span>
             <div>
               <strong>API Key no configurada.</strong><br>
-              <small>Ingresa tu clave de Groq para continuar.</small>
+              <small>Ingresa tu clave de OpenRouter para continuar.</small>
             </div>
           </div>
           <div class="form-group" style="margin-bottom:16px">
-            <label class="form-label">Groq API Key</label>
+            <label class="form-label">OpenRouter API Key</label>
             <div style="display:flex;gap:8px">
-              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="gsk_..." style="flex:1" />
+              <input type="password" id="ocr-api-key-input" class="form-input" placeholder="sk-or-v1-..." style="flex:1" />
               <button class="btn btn-secondary btn-sm" onclick="GeminiOCR._saveApiKey()">Guardar</button>
             </div>
           </div>` : ''}
@@ -70,9 +70,9 @@ const GeminiOCR = {
 
   _saveApiKey() {
     const val = document.getElementById('ocr-api-key-input')?.value?.trim();
-    if (!val || !val.startsWith('gsk_')) { Toast.error('Clave no válida. Debe empezar con gsk_'); return; }
+    if (!val || !val.startsWith('sk-or-')) { Toast.error('Clave no válida. Debe empezar con sk-or-'); return; }
     this.setApiKey(val);
-    Toast.success('API Key de Groq guardada');
+    Toast.success('API Key de OpenRouter guardada');
     this.openUploadModal();
   },
 
@@ -180,7 +180,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
           status.innerHTML = `
             <div class="ocr-alert ocr-alert-info">
               <div class="spinner-sm"></div>
-              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Llama 3.2 11B Vision...<br><small>${Utils.escHtml(file.name)}</small></span>
+              <span>Analizando foto <strong>${i + 1} de ${this._selectedFiles.length}</strong> con Gemini 2.0 Flash Vision...<br><small>${Utils.escHtml(file.name)}</small></span>
             </div>`;
         }
 
@@ -188,16 +188,16 @@ IMPORTANTE: Devuelve ÚNICAMENTE el JSON válido a continuación, sin explicacio
           const base64Data = await this._toBase64(file);
           const mimeType = file.type || 'image/jpeg';
 
-          const res = await fetch('/api/groq', {
+          const res = await fetch('/api/openrouter', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: 'llama-3.2-11b-vision-preview',
+              model: 'google/gemini-2.0-flash-exp:free',
               temperature: 0.1,
-              max_tokens: 500,
+              max_tokens: 800,
               messages: [
                 {
                   role: 'user',
