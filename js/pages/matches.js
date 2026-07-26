@@ -225,10 +225,15 @@ const MatchesPage = {
     let matches = DB.getMatches(groupId);
     const { filter, search } = this.state;
     const today = Utils.getLocalISODate();
-    const weekAgo = Utils.getLocalISODate(new Date(Date.now() - 7*86400000));
+    const weekAgoTime = Date.now() - 7 * 86400000;
 
     if (filter === 'today') matches = matches.filter(m => m.date === today);
-    if (filter === 'week') matches = matches.filter(m => m.date >= weekAgo);
+    if (filter === 'week') {
+      matches = matches.filter(m => {
+        const d = new Date(m.date);
+        return !isNaN(d.getTime()) && d.getTime() >= weekAgoTime;
+      });
+    }
 
     if (search) {
       const q = search.toLowerCase();
