@@ -227,11 +227,13 @@ const MatchesPage = {
     const today = Utils.getLocalISODate();
     const weekAgoTime = Date.now() - 7 * 86400000;
 
-    if (filter === 'today') matches = matches.filter(m => m.date === today);
+    if (filter === 'today') matches = matches.filter(m => !m._dateCorrupted && m.date === today);
     if (filter === 'week') {
       matches = matches.filter(m => {
+        if (m._dateCorrupted) return false;
         const d = new Date(m.date);
-        return !isNaN(d.getTime()) && d.getTime() >= weekAgoTime;
+        if (isNaN(d.getTime()) || d.getFullYear() > 2100) return false;
+        return d.getTime() >= weekAgoTime;
       });
     }
 

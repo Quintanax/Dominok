@@ -242,14 +242,23 @@ const DB = {
     let m = this._store.matches;
     if (groupId) m = m.filter(x => x.groupId === groupId);
     
-    // FIX: Normalize and correct any corrupted numeric timestamps (e.g., year 46180 bug)
+    // FIX: Normalize and correct any corrupted date values
     m.forEach(match => {
       if (typeof match.date === 'number') {
+        // Numeric timestamps: fix microseconds stored as milliseconds
         let ts = match.date;
-        if (ts > 4102444800000) { // If year > 2100, it was likely multiplied by 1000 by mistake
+        if (ts > 4102444800000) { // year > 2100: was multiplied by 1000 by mistake
           ts = Math.floor(ts / 1000);
         }
         match.date = Utils.getLocalISODate(new Date(ts));
+      } else if (typeof match.date === 'string') {
+        // String dates: detect years far in the future (e.g. "46180-01-01")
+        const yearMatch = match.date.match(/^(\d{4,})-/);
+        if (yearMatch && parseInt(yearMatch[1], 10) > 2100) {
+          // The year is absurdly large — mark date as unknown
+          match.date = '1970-01-01'; // sentinel; will be hidden by 'week' filter
+          match._dateCorrupted = true;
+        }
       }
     });
 
