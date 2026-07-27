@@ -412,8 +412,8 @@ window.CloudDB = {
     if (!groupId) return false;
 
     try {
-      const localPlayers = DB._store.players.filter(p => p.groupId === groupId);
-      const localMatches = DB._store.matches.filter(m => m.groupId === groupId);
+      const localPlayers = DB.getPlayers(groupId);
+      const localMatches = DB.getMatches(groupId);
       const deletedIds = DB._store.deletedMatchIds || [];
 
       // 1. Guardar jugadores en el documento del grupo

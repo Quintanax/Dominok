@@ -192,7 +192,11 @@ const DB = {
   // === PLAYERS ===
   getPlayers(groupId = null) {
     if (!groupId) return this._store.players;
-    return this._store.players.filter(p => p.groupId === groupId && p.active);
+    return this._store.players.filter(p => {
+      const belongsToGroup = (p.groupId === groupId || !p.groupId);
+      const isActive = (p.active !== false);
+      return belongsToGroup && isActive;
+    });
   },
   getPlayerById(id) { return this._store.players.find(p => p.id === id); },
   addPlayer(player) {
