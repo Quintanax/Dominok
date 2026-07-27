@@ -74,10 +74,12 @@ const Utils = {
     return `<div class="avatar${s}" style="background:${this.avatarColor(name)}">${this.initials(name)}</div>`;
   },
 
-  // Get player name
-  playerName(id) {
+  // Get player name — fallback to a stored name if the player list hasn't synced yet
+  playerName(id, fallback) {
     const p = DB.getPlayerById(id);
-    return p ? p.name : 'Desconocido';
+    if (p) return p.name;
+    if (fallback && fallback !== 'undefined') return fallback;
+    return 'Desconocido';
   },
   playerAlias(id) {
     const p = DB.getPlayerById(id);

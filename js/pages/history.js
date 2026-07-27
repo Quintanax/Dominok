@@ -154,8 +154,8 @@ const HistoryPage = {
     }
 
     listEl.innerHTML = paged.items.map(m => {
-      const t1n = `${Utils.escHtml(Utils.playerName(m.team1.player1))} & ${Utils.escHtml(Utils.playerName(m.team1.player2))}`;
-      const t2n = `${Utils.escHtml(Utils.playerName(m.team2.player1))} & ${Utils.escHtml(Utils.playerName(m.team2.player2))}`;
+      const t1n = `${Utils.escHtml(Utils.playerName(m.team1.player1, m.team1.player1Name))} & ${Utils.escHtml(Utils.playerName(m.team1.player2, m.team1.player2Name))}`;
+      const t2n = `${Utils.escHtml(Utils.playerName(m.team2.player1, m.team2.player1Name))} & ${Utils.escHtml(Utils.playerName(m.team2.player2, m.team2.player2Name))}`;
       const w1 = m.winner === 'team1';
       const shoesTotal = (m.shoes?.team1Given || 0) + (m.shoes?.team2Given || 0);
       const isOpen = this.state.expanded === m.id;
@@ -216,8 +216,8 @@ const HistoryPage = {
     const filtered = this.getFiltered();
     const data = filtered.map(m => ({
       Fecha: m.date, Tipo: m.type,
-      'P1 J1': Utils.playerName(m.team1.player1), 'P1 J2': Utils.playerName(m.team1.player2),
-      'P2 J1': Utils.playerName(m.team2.player1), 'P2 J2': Utils.playerName(m.team2.player2),
+      'P1 J1': Utils.playerName(m.team1.player1, m.team1.player1Name), 'P1 J2': Utils.playerName(m.team1.player2, m.team1.player2Name),
+      'P2 J1': Utils.playerName(m.team2.player1, m.team2.player1Name), 'P2 J2': Utils.playerName(m.team2.player2, m.team2.player2Name),
       'Score P1': m.score.team1, 'Score P2': m.score.team2,
       Ganador: m.winner === 'team1' ? 'Pareja 1' : 'Pareja 2',
       Notas: m.notes || ''
@@ -290,8 +290,8 @@ const HistoryPage = {
     }
     
     const tableData = filtered.map(m => {
-        const p1 = `${Utils.playerName(m.team1.player1)} & ${Utils.playerName(m.team1.player2)}`;
-        const p2 = `${Utils.playerName(m.team2.player1)} & ${Utils.playerName(m.team2.player2)}`;
+        const p1 = `${Utils.playerName(m.team1.player1, m.team1.player1Name)} & ${Utils.playerName(m.team1.player2, m.team1.player2Name)}`;
+        const p2 = `${Utils.playerName(m.team2.player1, m.team2.player1Name)} & ${Utils.playerName(m.team2.player2, m.team2.player2Name)}`;
         const score = `${m.score.team1} - ${m.score.team2}`;
         const winner = m.winner === 'team1' ? 'Pareja 1' : 'Pareja 2';
         const type = m.type === 'tournament' ? 'Torneo' : 'Amistoso';
